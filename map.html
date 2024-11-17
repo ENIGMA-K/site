@@ -65,6 +65,8 @@
           	I+=1;
             output += I+". "+plan.getDuration(true) + "\t";                //获取时间
             output += plan.getDistance(true) + "\n";             //获取距离
+            var ret = plan.getDuration(true)+ "\t"+plan.getDistance(true);
+            return ret;
         }
         var transit = new BMapGL.DrivingRoute(map, {renderOptions: {map: map, autoViewport: true },
             onSearchComplete: searchComplete,
@@ -110,9 +112,13 @@
           {name: "中日友好医院北区",pos:new BMapGL.Point(116.428338,39.983561)},
           {name: "北京市疾病预防控制中心",pos:new BMapGL.Point(116.411181,39.956709)},
         ];
+        let arr=new Array(3);
+        for (let i=0;i<3;i++){
+            arr[i]=new Array(3);
+        }
         for (var i=0;i<3;i++){
           for (var j=i;j<3;j++){
-            transit.search(Point[i].pos, Point[j].pos);
+            arr[i][j]=transit.search(Point[i].pos, Point[j].pos);
           }  
         }
         function dl(){
