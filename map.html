@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>计算驾车时间与距离</title>
+    <script type="text/javascript" src="//api.map.baidu.com/api?type=webgl&v=1.0&ak=oTaOwxAbKOYU1eyykSKlKVhoDanJhboE"></script>
+    <style>
+        html,body{
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        #allmap{
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <div id='allmap'></div>
+    <script>
+        var map = new BMapGL.Map("allmap");
+        map.centerAndZoom(new BMapGL.Point(116.404, 39.915), 12);
+        var output = "";
+      	var I=0;
+        var searchComplete = function (results){
+            if (transit.getStatus() != BMAP_STATUS_SUCCESS){
+                return ;
+            }
+            var plan = results.getPlan(0);
+          	I+=1;
+            output += I+". "+plan.getDuration(true) + "\t";                //获取时间
+            output += plan.getDistance(true) + "\n";             //获取距离
+        }
+        var transit = new BMapGL.DrivingRoute(map, {renderOptions: {map: map, autoViewport: true },
+            onSearchComplete: searchComplete,
+            onPolylinesSet: function(){}});
+        const Point=[
+          {name: "首都医科大学宣武医院",pos:new BMapGL.Point(116.36317,39.891888)},
+          {name: "首都医科大学附属北京友谊医院西城院区",pos:new BMapGL.Point(116.393365,39.885737)},
+          {name: "首都医科大学附属北京友谊医院通州院区",pos:new BMapGL.Point(116.683158,39.933973)},
+          {name: "首都医科大学附属北京友谊医院顺义院区",pos:new BMapGL.Point(116.518697,40.114784)},
+          {name: "首都医科大学附属北京朝阳医院院本部",pos:new BMapGL.Point(116.455084,39.925784)},
+          {name: "首都医科大学附属北京朝阳医院京西院区",pos:new BMapGL.Point(116.210786,39.9008)},
+          {name: "首都医科大学附属北京朝阳医院常营院区",pos:new BMapGL.Point(116.600173,39.922312)},
+          {name: "首都医科大学附属北京朝阳医院七棵树院区*",pos:new BMapGL.Point(116.525768,39.957235)},
+          {name: "首都医科大学附属北京同仁医院崇文门院区",pos:new BMapGL.Point(116.418164,39.903036)},
+          {name: "首都医科大学附属北京同仁医院亦庄院区",pos:new BMapGL.Point(116.519447,39.773106)},
+          {name: "首都医科大学附属北京天坛医院",pos:new BMapGL.Point(116.316448,39.833421)},
+          {name: "首都医科大学附属北京安贞医院朝阳院区",pos:new BMapGL.Point(116.40212,39.972732)},
+          {name: "首都医科大学附属北京安贞医院通州院区",pos:new BMapGL.Point(116.709873,39.939439)},
+          {name: "北京积水潭医院新街口院区",pos:new BMapGL.Point(116.375993,39.942921)},
+          {name: "北京积水潭医院回龙观院区",pos:new BMapGL.Point(116.324751,40.087093)},
+          {name: "北京积水潭医院新龙泽院区",pos:new BMapGL.Point(116.303792,40.065897)},
+          {name: "首都医科大学附属复兴医院住院部",pos:new BMapGL.Point(116.339781,39.906539)},
+          {name: "首都医科大学附属复兴医院门诊部",pos:new BMapGL.Point(116.352591,39.918468)},
+          {name: "首都医科大学附属北京佑安医院",pos:new BMapGL.Point(116.354542,39.866404)},
+          {name: "首都医科大学附属北京胸科医院",pos:new BMapGL.Point(116.652862,39.922436)},
+          {name: "首都医科大学三博脑科医院",pos:new BMapGL.Point(116.208748,39.992615)},
+          {name: "首都医科大学附属北京地坛医院",pos:new BMapGL.Point(116.527112,40.023378)},
+          {name: "首都医科大学附属北京地坛医院顺义院区",pos:new BMapGL.Point(116.75896,40.100692)},
+          {name: "首都医科大学附属北京儿童医院",pos:new BMapGL.Point(116.356306,39.912365)},
+          {name: "首都医科大学附属北京口腔医院天坛部",pos:new BMapGL.Point(116.401393,39.877568)},
+          {name: "首都医科大学附属北京口腔医院王府井部",pos:new BMapGL.Point(116.40947,39.916333)},
+          {name: "首都医科大学附属北京口腔医院西红门部",pos:new BMapGL.Point(116.344656,39.793369)},
+          {name: "首都医科大学附属北京安定医院",pos:new BMapGL.Point(116.377597,39.952747)},
+          {name: "首都医科大学附属北京妇产医院北京妇幼保健院东院",pos:new BMapGL.Point(116.471135,39.930531)},
+          {name: "首都医科大学附属北京妇产医院北京妇幼保健院西院",pos:new BMapGL.Point(116.404304,39.919881)},
+          {name: "北京中医医院",pos:new BMapGL.Point(116.408746,39.931808)},
+          {name: "首都医科大学附属北京世纪坛医院",pos:new BMapGL.Point(116.320953,39.899583)},
+          {name: "首都医科大学附属北京康复医院",pos:new BMapGL.Point(116.19658,39.944549)},
+          {name: "首都医科大学附属北京潞河医院",pos:new BMapGL.Point(116.658116,39.901794)},
+          {name: "首都医科大学附属北京潞河医院新华联口腔门诊",pos:new BMapGL.Point(116.643294,39.889664)},
+          {name: "中国康复研究中心（博爱医院）",pos:new BMapGL.Point(116.378966,39.850573)},
+          {name: "中日友好医院本部院区",pos:new BMapGL.Point(116.42475,39.97368)},
+          {name: "中日友好医院北区",pos:new BMapGL.Point(116.428338,39.983561)},
+          {name: "北京市疾病预防控制中心",pos:new BMapGL.Point(116.411181,39.956709)},
+        ];
+        for (var i=0;i<3;i++){
+          for (var j=i;j<3;j++){
+            transit.search(Point[i].pos, Point[j].pos);
+          }  
+        }
+        document.write("<h1>" + output + "</h1>");
+    </script>
+</body>
+</html>
