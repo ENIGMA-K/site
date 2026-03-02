@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>住院患者管理系统</title>
+    <!-- 优化视口设置，确保在移动设备上能正确缩放 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="theme-color" content="#0d6efd">
+    
+    <!-- 引入Bootstrap CSS -->
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    
+    <style>
+        /* 基础布局与交互 */
+        .patient-row:hover { cursor: pointer; }
+        .highlight { background-color: #d1e7dd !important; }
+        .sortable:hover { cursor: pointer; text-decoration: underline; }
+        .todo-tag { padding: 2px 5px; border-radius: 3px; font-size: 0.85em; cursor: pointer; }
+        .modal-body label { font-weight: bold; }
+        .todo-item:hover { background-color: #f8f9fa; cursor: pointer; }
+
+        /* 状态颜色 */
+        .status-preop { color: orange; }       /* 术前 */
+        .status-postop { color: green; }       /* 术后 */
+        .status-icu { color: red; }            /* 各个监护室 */
+        .status-discharged { color: black; }  /* 出院 */
+
+        /* 移动端优化 */
+        @media (max-width: 768px) {
+            /* 按钮组在竖屏时自动换行 */
+            .operation-bar .col-12 {
+                margin-bottom: 8px;
+            }
+            /* 表格在移动端自动横向滚动 */
+            .table-responsive {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            /* 使得输入框在小屏幕上更紧凑 */
+            .modal-body .col-12 {
+                margin-bottom: 8px;
+            }
+        }
+
+        /* 16:9 手机屏幕优化（例如 1080x1920） */
+        @media (max-width: 1080px) {
+            body {
+                font-size: 14px;
+            }
+            .container-fluid {
+                padding: 0.5rem;
+            }
+            .modal-content {
+                max-height: 90vh;
+                overflow-y: auto;
+            }
+        }
+
+        /* 横屏模式下的特殊布局调整 */
+        @media (orientation: landscape) {
+            .container-fluid {
+                max-width: 100vw;
+                padding: 0.5rem;
+            }
+            .modal-dialog {
+                max-width: 90%;
+            }
+        }
+    </style>
+
+    <!-- ========== 移动端增强优化样式（新增，不改动原有内容） ========== -->
+    <style>
+        /* 提升触摸区域及可读性，完全兼容原有功能 */
+        * {
+            -webkit-tap-highlight-color: rgba(0, 122, 255, 0.1); /* 轻触反馈 */
+        }
+
+        /* 通用触摸最小高度，防止误触 */
+        .btn-sm,
+        .form-control,
+        .form-select,
+        .todo-tag,
+        .sortable th,
+        #todoTable tbody tr,
+        .patient-row td .todo-tag {
+            touch-action: manipulation; /* 优化触摸响应 */
+        }
+
+        @media (max-width: 768px) {
+            /* 增大按钮尺寸，符合指尖操作 */
+            .btn-sm {
+                padding: 0.5rem 0.9rem;
+                font-size: 1rem;
+                min-height: 44px;
+                min-width: 44px;
+                border-radius: 8px;
+            }
+
+            /* 输入框、下拉框增大高度，避免点击困难 */
+            .form-control,
+            .form-select {
+                min-height: 48px;
+                font-size: 16px; /* 防止iOS自动缩放 */
+                padding: 0.6rem 0.75rem;
+            }
+
+            /* 待办标签：更大点击区域，圆润醒目 */
+            .todo-tag {
+                padding: 8px 14px !important;
+                margin: 3px !important;
+                border-radius: 24px !important;
+                font-size: 0.95em !important;
+                color: #ffffff !important;
+                text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+                display: inline-block;
+                line-height: 1.2;
+                font-weight: 500;
+                transition: opacity 0.1s;
+            }
+            .todo-tag:active {
+                opacity: 0.7;
+            }
+
+            /* 表头可点击区域增大 */
+            .sortable th {
+                padding: 14px 6px;
+                position: relative;
+                vertical-align: middle;
+            }
+            .sortable th:after {
+                content: '';
+                position: absolute;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: transparent;
+                pointer-events: none;
+            }
+
+            /* 操作栏：让每个筛选框/按钮有最小宽度，自动折行 */
+            .operation-bar .flex-fill {
+                flex: 1 1 160px;  /* 至少160px，两三个在一行，超长则换行 */
+                min-width: 140px;
+            }
+
+            /* 模态框内部间距优化 */
+            .modal-body {
+                padding: 1.2rem 1rem;
+            }
+            .modal-body .row.g-2 > [class*="col-"] {
+                margin-bottom: 12px;
+            }
+
+            /* 标签管理区域颜色选择器大小调整 */
+            #tagSettings .form-control-color {
+                width: 48px;
+                height: 48px;
+                padding: 4px;
+            }
+            #tagSettings .btn-sm {
+                min-height: 44px;
+                min-width: 44px;
+            }
+
+            /* 待办事项表格行增加点击区域 */
+            #todoTable td {
+                padding: 14px 10px;
+            }
+            #todoTable tbody tr {
+                min-height: 58px;
+            }
+
+            /* 出院患者列表同等待遇 */
+            #dischargedTable td {
+                padding: 12px 6px;
+                white-space: nowrap; /* 配合横向滚动 */
+            }
+
+            /* 所有表格单元保持不换行，依靠横向滚动 */
+            .table td {
+                white-space: nowrap;
+            }
+
+            /* 移除可能因缩放产生的模糊 */
+            .modal-content {
+                border-radius: 20px 20px 0 0;
+            }
+
+            /* 横屏时调整最大宽度 */
+            @media (orientation: landscape) {
+                .modal-dialog {
+                    max-width: 85%;
+                    margin: 1.75rem auto;
+                }
+                .btn-sm {
+                    min-height: 40px;
+                }
+            }
+        }
+
+        /* 全局触摸反馈 */
+        .patient-row:active,
+        .btn:active,
+        .sortable th:active,
+        .todo-item:active {
+            opacity: 0.75;
+            background-color: rgba(0,0,0,0.03);
+        }
+
+        /* 确保所有待办标签文字在深色背景下清晰可见（原有内联背景色保持不变） */
+        .todo-tag {
+            transition: transform 0.1s, box-shadow 0.1s;
+            font-weight: 500;
+            border: none;
+        }
+        .todo-tag:active {
+            transform: scale(0.96);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        /* 解决iOS下圆角溢出问题 */
+        .modal-content {
+            overflow: hidden;
+        }
+
+        /* 确保出院患者列表的待办标签也应用增强样式 */
+        #dischargedList .todo-tag {
+            padding: 8px 14px !important;
+            margin: 3px !important;
+            border-radius: 24px !important;
+            color: #ffffff !important;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+        }
+
+        /* 床号下拉框选项高度适中 */
+        select.form-select option {
+            padding: 12px;
+            font-size: 16px;
+        }
+
+        /* 文件导入按钮隐藏input不影响，点击区域已增大 */
+        #importBtn, #exportBtn, #csvImportBtn {
+            min-width: 60px;
+        }
+    </style>
+    <!-- ========== 移动端增强样式结束 ========== -->
+
+</head>
+
+<body class="bg-light">
+
+<div class="container-fluid py-2">
+    <h5 class="text-center mb-2">住院患者管理系统</h5>
+    
+    <!-- 操作栏 -->
+    <div class="row mb-2 g-2 operation-bar">
+        <div class="col-12 d-flex flex-wrap gap-2">
+            <input type="text" id="filterName" class="form-control flex-fill" placeholder="搜索姓名">
+            <input type="text" id="filterBed" class="form-control flex-fill" placeholder="搜索床号">
+            <select id="filterStatus" class="form-select flex-fill">
+                <option value="">全部状态</option>
+                <option value="术前">术前</option>
+                <option value="术后">术后</option>
+                <option value="CICU">CICU</option>
+                <option value="CCU">CCU</option>
+                <option value="NICU">NICU</option>
+                <option value="出院">出院</option>
+            </select>
+            <input type="number" id="filterDays" class="form-control flex-fill" placeholder="住院天数">
+        </div>
+        <div class="col-12 d-flex flex-wrap gap-2 justify-content-end">
+            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#todoModal">待办事项</button>
+            <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addPatientModal">新入患者</button>
+            <button class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#updateStatusModal">更新状态</button>
+            <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#addTodoModal">添加待办</button>
+            <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#dischargeModal">患者出院</button>
+            <button class="btn btn-outline-secondary btn-sm" id="importBtn">导入JSON</button>
+            <button class="btn btn-outline-success btn-sm" id="exportBtn">导出JSON</button>
+            <button class="btn btn-outline-primary btn-sm" id="csvImportBtn">导入CSV</button>
+            <input type="file" id="fileInput" accept=".json" style="display:none;">
+            <input type="file" id="csvFileInput" accept=".csv" style="display:none;">
+        </div>
+    </div>
+
+    <!-- 在院患者列表 -->
+    <h6 class="mt-2">在院患者</h6>
+    <div class="table-responsive">
+        <table class="table table-hover table-sm align-middle" id="patientTable">
+            <thead class="table-dark">
+                <tr>
+                    <th class="sortable" data-key="name">姓名</th>
+                    <th class="sortable" data-key="gender">性别</th>
+                    <th class="sortable" data-key="age">年龄</th>
+                    <th class="sortable" data-key="caseNumber">病案号</th>
+                    <th class="sortable" data-key="bed">床号</th>
+                    <th class="sortable" data-key="diagnosis">主要诊断</th>
+                    <th class="sortable" data-key="doctor">主管医师</th>
+                    <th class="sortable" data-key="status">状态</th>
+                    <th class="sortable" data-key="admissionDate">住院日期</th>
+                    <th class="sortable" data-key="admissionDays">住院天数</th>
+                    <th class="sortable" data-key="surgeryDate">手术日期</th>
+                    <th class="sortable" data-key="surgeryName">手术名称</th>
+                    <th class="sortable" data-key="postopDays">术后天数</th>
+                    <th>备注</th>
+                    <th>待办标签</th>
+                </tr>
+            </thead>
+            <tbody id="patientList"></tbody>
+        </table>
+    </div>
+
+    <!-- 出院患者列表 -->
+    <h6 class="mt-2">出院患者</h6>
+    <div class="table-responsive">
+        <table class="table table-hover table-sm align-middle" id="dischargedTable">
+            <thead class="table-dark">
+                <tr>
+                    <th>姓名</th>
+                    <th>性别</th>
+                    <th>年龄</th>
+                    <th>病案号</th>
+                    <th>床号</th>
+                    <th>主要诊断</th>
+                    <th>主管医师</th>
+                    <th>状态</th>
+                    <th>住院日期</th>
+                    <th>住院天数</th>
+                    <th>手术日期</th>
+                    <th>手术名称</th>
+                    <th>术后天数</th>
+                    <th>备注</th>
+                    <th>待办标签</th>
+                </tr>
+            </thead>
+            <tbody id="dischargedList"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 新入患者弹窗 -->
+<div class="modal fade" id="addPatientModal" tabindex="-1">
+    <div class="modal-dialog modal-fullscreen-sm-down">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">新入患者</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addPatientForm">
+                    <div class="row g-2">
+                        <div class="col-12 col-md-4"><label>患者姓名</label><input type="text" class="form-control" name="name" required></div>
+                        <div class="col-12 col-md-2"><label>性别</label><input type="text" class="form-control" name="gender"></div>
+                        <div class="col-12 col-md-2"><label>年龄</label><input type="number" class="form-control" name="age"></div>
+                        <div class="col-12 col-md-4"><label>病案号</label><input type="text" class="form-control" name="caseNumber" required></div>
+                        <div class="col-12 col-md-3"><label>床号</label><select class="form-select" name="bed" id="addBedSelect"></select></div>
+                        <div class="col-12 col-md-3"><label>住院日期</label><input type="date" class="form-control" name="admissionDate"></div>
+                        <div class="col-12 col-md-3"><label>手术日期</label><input type="date" class="form-control" name="surgeryDate"></div>
+                        <div class="col-12 col-md-3"><label>手术名称</label><input type="text" class="form-control" name="surgeryName"></div>
+                        <div class="col-12"><label>主要诊断</label><input type="text" class="form-control" name="diagnosis"></div>
+                        <div class="col-12"><label>主管医师</label><input type="text" class="form-control" name="doctor"></div>
+                        <div class="col-12"><label>备注</label><input type="text" class="form-control" name="remark"></div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="savePatientBtn">保存</button>
+                <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 更新状态弹窗 -->
+<div class="modal fade" id="updateStatusModal" tabindex="-1">
+    <div class="modal-dialog modal-fullscreen-sm-down">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">更新患者状态</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2">
+                    <label>选择患者</label>
+                    <select class="form-select" id="updateSelect">
+                        <option value="">请选择患者</option>
+                    </select>
+                </div>
+                <form id="updatePatientForm">
+                    <div class="row g-2">
+                        <div class="col-12 col-md-4"><label>患者姓名</label><input type="text" class="form-control" name="name" required></div>
+                        <div class="col-12 col-md-2"><label>性别</label><input type="text" class="form-control" name="gender"></div>
+                        <div class="col-12 col-md-2"><label>年龄</label><input type="number" class="form-control" name="age"></div>
+                        <div class="col-12 col-md-4"><label>病案号</label><input type="text" class="form-control" name="caseNumber" required></div>
+                        <div class="col-12 col-md-3"><label>床号</label><select class="form-select" name="bed" id="updateBedSelect"></select></div>
+                        <div class="col-12 col-md-3"><label>住院日期</label><input type="date" class="form-control" name="admissionDate"></div>
+                        <div class="col-12 col-md-3"><label>手术日期</label><input type="date" class="form-control" name="surgeryDate"></div>
+                        <div class="col-12 col-md-3"><label>手术名称</label><input type="text" class="form-control" name="surgeryName"></div>
+                        <div class="col-12"><label>主要诊断</label><input type="text" class="form-control" name="diagnosis"></div>
+                        <div class="col-12"><label>主管医师</label><input type="text" class="form-control" name="doctor"></div>
+                        <div class="col-12"><label>备注</label><input type="text" class="form-control" name="remark"></div>
+                        <div class="col-12"><label>患者状态</label>
+                            <select class="form-select" name="status">
+                                <option value="术前">术前</option>
+                                <option value="术后">术后</option>
+                                <option value="CICU">CICU</option>
+                                <option value="CCU">CCU</option>
+                                <option value="NICU">NICU</option>
+                                <option value="出院">出院</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+                <div id="statusAlert" class="alert alert-warning mt-2 d-none">状态已修改为“出院”，系统将自动转移至出院患者列表。</div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="saveUpdateBtn">保存修改</button>
+                <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加待办弹窗 -->
+<div class="modal fade" id="addTodoModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">添加待办</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2">
+                    <label>选择患者（可多选）</label>
+                    <div id="todoPatientList" style="max-height:200px; overflow-y:auto;"></div>
+                </div>
+                <div class="mb-2">
+                    <label>待办内容</label>
+                    <input type="text" class="form-control" id="newTodoContent" placeholder="请输入待办标签名称">
+                </div>
+                <div class="mb-2">
+                    <label>待办颜色</label>
+                    <input type="color" class="form-control form-control-color" id="newTodoColor" value="#ff0000">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="addTodoConfirmBtn">添加</button>
+                <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 待办事项弹窗 -->
+<div class="modal fade" id="todoModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">待办事项</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <table class="table table-sm" id="todoTable">
+                    <thead>
+                        <tr>
+                            <th>标签名称</th>
+                            <th>患者 (床号)</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#manageTagsModal">设置待办标签</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 管理标签弹窗 -->
+<div class="modal fade" id="manageTagsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">管理待办标签</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-2" id="tagSettings"></div>
+                <hr>
+                <h6>添加新标签</h6>
+                <div class="row g-2 align-items-center">
+                    <div class="col-auto"><input type="text" class="form-control" id="newTagName" placeholder="标签名称"></div>
+                    <div class="col-auto"><input type="color" class="form-control form-control-color" id="newTagColor" value="#ff0000"></div>
+                    <div class="col-auto"><button class="btn btn-primary" id="addTagBtn">添加</button></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 患者出院弹窗 -->
+<div class="modal fade" id="dischargeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">患者出院</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <select class="form-select" id="dischargeSelect">
+                    <option value="">请选择患者</option>
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" id="confirmDischargeBtn">确认出院</button>
+                <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 引入Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+class HospitalApp {
+    constructor() {
+        this.patients = []; // 在院患者
+        this.discharged = []; // 出院患者
+        this.tags = {
+            "新入": "#FFA500",
+            "出院病历": "#007BFF"
+        };
+        this.sortConfig = { key: null, asc: true };
+        this.loadData();
+        this.initEvents();
+        this.renderAll();
+        this.updateDischargeOptions();
+        this.populateBedSelect('addBedSelect');
+        this.populateBedSelect('updateBedSelect');
+    }
+
+    // ------------------- 数据处理 -------------------
+    loadData() {
+        const saved = localStorage.getItem('hospitalData');
+        if (saved) {
+            const data = JSON.parse(saved);
+            this.patients = data.patients || [];
+            this.discharged = data.discharged || [];
+            this.tags = data.tags || this.tags;
+        }
+    }
+
+    saveData() {
+        localStorage.setItem('hospitalData', JSON.stringify({
+            patients: this.patients,
+            discharged: this.discharged,
+            tags: this.tags
+        }));
+    }
+
+    addPatient(data) {
+        if (this.findPatientByCase(data.caseNumber)) {
+            alert('病案号已存在，请检查！');
+            return false;
+        }
+        const newPatient = {
+            id: Date.now(),
+            name: data.name,
+            gender: data.gender,
+            age: data.age,
+            caseNumber: data.caseNumber,
+            bed: data.bed,
+            diagnosis: data.diagnosis,
+            doctor: data.doctor,
+            admissionDate: data.admissionDate,
+            surgeryDate: data.surgeryDate,
+            surgeryName: data.surgeryName,
+            status: "术前",
+            remark: data.remark || '',
+            todos: ["新入"]
+        };
+        this.patients.push(newPatient);
+        this.saveData();
+        this.renderAll();
+        this.updateDischargeOptions();
+        return true;
+    }
+
+    // ------------------- 床号处理 -------------------
+    populateBedSelect(selectId) {
+        const select = document.getElementById(selectId);
+        select.innerHTML = '';
+        // 01床~60床
+        for (let i = 1; i <= 60; i++) {
+            const num = i.toString().padStart(2, '0');
+            const option = document.createElement('option');
+            option.value = `${num}床`;
+            option.textContent = `${num}床`;
+            select.appendChild(option);
+        }
+        // Z1床~Z10床
+        for (let i = 1; i <= 10; i++) {
+            const option = document.createElement('option');
+            option.value = `Z${i}床`;
+            option.textContent = `Z${i}床`;
+            select.appendChild(option);
+        }
+        // +01床~+20床
+        for (let i = 1; i <= 20; i++) {
+            const num = i.toString().padStart(2, '0');
+            const option = document.createElement('option');
+            option.value = `+${num}床`;
+            option.textContent = `+${num}床`;
+            select.appendChild(option);
+        }
+    }
+
+    // ------------------- 渲染 -------------------
+    renderAll() {
+        this.renderPatients();
+        this.renderDischarged();
+        this.renderTodoList();
+        this.renderTagSettings();
+        this.renderUpdateSelect();
+        this.renderTodoPatientList();
+    }
+
+    renderPatients() {
+        const tbody = document.getElementById('patientList');
+        tbody.innerHTML = '';
+        const filtered = this.applyFilters(this.patients);
+        const sorted = this.sortPatients(filtered);
+        sorted.forEach(p => {
+            const tr = document.createElement('tr');
+            tr.className = 'patient-row';
+            tr.innerHTML = `
+                <td>${p.name}</td>
+                <td>${p.gender || ''}</td>
+                <td>${p.age || ''}</td>
+                <td>${p.caseNumber}</td>
+                <td>${p.bed || ''}</td>
+                <td>${p.diagnosis || ''}</td>
+                <td>${p.doctor || ''}</td>
+                <td class="${this.getStatusClass(p.status)}">${p.status}</td>
+                <td>${p.admissionDate || ''}</td>
+                <td>${this.calculateDays(p.admissionDate)}</td>
+                <td>${p.surgeryDate || ''}</td>
+                <td>${p.surgeryName || ''}</td>
+                <td>${this.calculateDays(p.surgeryDate)}</td>
+                <td>${p.remark || ''}</td>
+                <td>${p.todos.map(t => `<span class="todo-tag" style="background-color:${this.tags[t] || '#6c757d'}" data-tag="${t}" data-patient="${p.id}">${t}</span>`).join(' ')}</td>
+            `;
+            tr.addEventListener('click', () => this.highlightRow(tr));
+            // 待办标签点击事件
+            tr.querySelectorAll('.todo-tag').forEach(tagEl => {
+                tagEl.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.handleTodoClick(p.id, tagEl.dataset.tag);
+                });
+            });
+            tbody.appendChild(tr);
+        });
+    }
+
+    renderDischarged() {
+        const tbody = document.getElementById('dischargedList');
+        tbody.innerHTML = '';
+        this.discharged.forEach(p => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${p.name}</td>
+                <td>${p.gender || ''}</td>
+                <td>${p.age || ''}</td>
+                <td>${p.caseNumber}</td>
+                <td>${p.bed || ''}</td>
+                <td>${p.diagnosis || ''}</td>
+                <td>${p.doctor || ''}</td>
+                <td class="${this.getStatusClass(p.status)}">${p.status}</td>
+                <td>${p.admissionDate || ''}</td>
+                <td>${this.calculateDays(p.admissionDate)}</td>
+                <td>${p.surgeryDate || ''}</td>
+                <td>${p.surgeryName || ''}</td>
+                <td>${this.calculateDays(p.surgeryDate)}</td>
+                <td>${p.remark || ''}</td>
+                <td>${p.todos.map(t => `<span class="todo-tag" style="background-color:${this.tags[t] || '#6c757d'}" data-tag="${t}" data-patient="${p.id}">${t}</span>`).join(' ')}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+        // 为出院患者的待办标签添加点击事件
+        this.attachTodoTagListeners('#dischargedList');
+    }
+
+    renderTodoList() {
+        const tbody = document.querySelector('#todoTable tbody');
+        tbody.innerHTML = '';
+        const tagMap = {};
+
+        this.patients.concat(this.discharged).forEach(p => {
+            p.todos.forEach(tag => {
+                if (!tagMap[tag]) tagMap[tag] = [];
+                tagMap[tag].push(`${p.name}（${p.bed}）`);
+            });
+        });
+
+        Object.entries(tagMap).forEach(([tag, patients]) => {
+            const tr = document.createElement('tr');
+            tr.className = 'todo-item';
+            tr.innerHTML = `
+                <td>${tag}</td>
+                <td>${patients.join(', ')}</td>
+            `;
+            tr.addEventListener('click', () => this.completeTodoTag(tag));
+            tbody.appendChild(tr);
+        });
+    }
+
+    renderTagSettings() {
+        const container = document.getElementById('tagSettings');
+        container.innerHTML = '';
+        Object.entries(this.tags).forEach(([tag, color]) => {
+            const div = document.createElement('div');
+            div.className = 'col-12 col-md-6 d-flex align-items-center gap-2';
+            div.innerHTML = `
+                <span style="background-color:${color};color:#fff;padding:2px 6px;border-radius:3px;">${tag}</span>
+                <input type="color" class="form-control form-control-color" value="${color}" data-tag="${tag}">
+                <button class="btn btn-sm btn-danger" data-tag="${tag}">删除</button>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    renderUpdateSelect() {
+        const select = document.getElementById('updateSelect');
+        select.innerHTML = '<option value="">请选择患者</option>';
+        this.patients.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = `${p.name} (${p.bed})`;
+            select.appendChild(opt);
+        });
+    }
+
+    renderTodoPatientList() {
+        const container = document.getElementById('todoPatientList');
+        container.innerHTML = '';
+        this.patients.forEach(p => {
+            const div = document.createElement('div');
+            div.className = 'form-check';
+            div.innerHTML = `
+                <input class="form-check-input" type="checkbox" value="${p.id}" id="todoPatient${p.id}">
+                <label class="form-check-label" for="todoPatient${p.id}">
+                    ${p.name} (${p.bed})
+                </label>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    // ------------------- 交互 -------------------
+    initEvents() {
+        // 添加患者
+        document.getElementById('savePatientBtn').addEventListener('click', () => {
+            const form = document.getElementById('addPatientForm');
+            const data = Object.fromEntries(new FormData(form).entries());
+            if (this.addPatient(data)) {
+                form.reset();
+                bootstrap.Modal.getInstance(document.getElementById('addPatientModal')).hide();
+            }
+        });
+
+        // 过滤
+        document.querySelectorAll('#filterName, #filterBed, #filterStatus, #filterDays')
+            .forEach(el => el.addEventListener('input', () => this.renderPatients()));
+
+        // 排序
+        document.querySelectorAll('.sortable').forEach(th => {
+            th.addEventListener('click', () => {
+                const key = th.dataset.key;
+                if (this.sortConfig.key === key) {
+                    this.sortConfig.asc = !this.sortConfig.asc;
+                } else {
+                    this.sortConfig.key = key;
+                    this.sortConfig.asc = true;
+                }
+                this.renderPatients();
+            });
+        });
+
+        // 导出 JSON
+        document.getElementById('exportBtn').addEventListener('click', () => {
+            const dataStr = JSON.stringify({
+                patients: this.patients,
+                discharged: this.discharged,
+                tags: this.tags
+            });
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `hospital_data_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        // 导入 JSON
+        document.getElementById('importBtn').addEventListener('click', () => {
+            document.getElementById('fileInput').click();
+        });
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    this.patients = data.patients || [];
+                    this.discharged = data.discharged || [];
+                    this.tags = data.tags || this.tags;
+                    this.saveData();
+                    this.renderAll();
+                    this.updateDischargeOptions();
+                } catch (err) {
+                    alert('导入失败：文件格式错误');
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        // CSV 导入
+        document.getElementById('csvImportBtn').addEventListener('click', () => {
+            document.getElementById('csvFileInput').click();
+        });
+        document.getElementById('csvFileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                this.addPatientsFromCSV(e.target.result);
+            };
+            reader.readAsText(file);
+        });
+
+        // 管理标签
+        document.getElementById('addTagBtn').addEventListener('click', () => {
+            const name = document.getElementById('newTagName').value.trim();
+            const color = document.getElementById('newTagColor').value;
+            if (name) {
+                this.tags[name] = color;
+                this.saveData();
+                this.renderTodoList();
+                this.renderTagSettings();
+                document.getElementById('newTagName').value = '';
+            }
+        });
+        document.getElementById('tagSettings').addEventListener('change', (e) => {
+            if (e.target.type === 'color') {
+                const tag = e.target.dataset.tag;
+                this.tags[tag] = e.target.value;
+                this.saveData();
+                this.renderTodoList();
+                this.renderTagSettings();
+            }
+        });
+        document.getElementById('tagSettings').addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON') {
+                const tag = e.target.dataset.tag;
+                delete this.tags[tag];
+                this.patients.forEach(p => p.todos = p.todos.filter(t => t !== tag));
+                this.discharged.forEach(p => p.todos = p.todos.filter(t => t !== tag));
+                this.saveData();
+                this.renderTodoList();
+                this.renderPatients();
+                this.renderDischarged();
+                this.renderTagSettings();
+                this.updateDischargeOptions();
+            }
+        });
+
+        // 更新状态
+        document.getElementById('updateSelect').addEventListener('change', (e) => {
+            const pid = e.target.value;
+            if (!pid) return;
+            const patient = this.patients.find(p => p.id == pid);
+            if (!patient) return;
+            const form = document.getElementById('updatePatientForm');
+            // 填充表单
+            Object.keys(patient).forEach(key => {
+                const input = form.querySelector(`[name="${key}"]`);
+                if (input) input.value = patient[key];
+            });
+            // 状态提示
+            const alertBox = document.getElementById('statusAlert');
+            alertBox.classList.toggle('d-none', patient.status !== '出院');
+        });
+        document.getElementById('saveUpdateBtn').addEventListener('click', () => {
+            const pid = document.getElementById('updateSelect').value;
+            if (!pid) return;
+            const patient = this.patients.find(p => p.id == pid);
+            const form = document.getElementById('updatePatientForm');
+            const data = Object.fromEntries(new FormData(form).entries());
+
+            // 检查病案号唯一性（排除自身）
+            const existing = this.findPatientByCase(data.caseNumber);
+            if (existing && existing.id !== patient.id) {
+                alert('病案号已存在，请检查！');
+                return;
+            }
+
+            // 更新信息
+            Object.assign(patient, data);
+            this.saveData();
+
+            // 如果状态改为出院，自动转移
+            if (patient.status === '出院') {
+                patient.todos.push('出院病历');
+                this.discharged.push(patient);
+                this.patients = this.patients.filter(p => p.id !== patient.id);
+                this.renderDischarged();
+                this.updateDischargeOptions();
+            }
+
+            this.renderAll();
+            bootstrap.Modal.getInstance(document.getElementById('updateStatusModal')).hide();
+        });
+
+        // 添加待办
+        document.getElementById('addTodoConfirmBtn').addEventListener('click', () => {
+            const checked = Array.from(document.querySelectorAll('#todoPatientList input:checked'));
+            const tag = document.getElementById('newTodoContent').value.trim();
+            const color = document.getElementById('newTodoColor').value;
+            if (!tag) return;
+            // 添加标签颜色
+            this.tags[tag] = color;
+            // 添加到患者
+            checked.forEach(cb => {
+                const pid = parseInt(cb.value);
+                const patient = this.patients.find(p => p.id === pid);
+                if (patient && !patient.todos.includes(tag)) {
+                    patient.todos.push(tag);
+                }
+            });
+            this.saveData();
+            this.renderAll();
+            bootstrap.Modal.getInstance(document.getElementById('addTodoModal')).hide();
+        });
+
+        // 患者出院
+        document.getElementById('confirmDischargeBtn').addEventListener('click', () => {
+            const pid = document.getElementById('dischargeSelect').value;
+            if (!pid) return;
+            const patient = this.patients.find(p => p.id == pid);
+            if (patient) {
+                patient.status = '出院';
+                patient.todos.push('出院病历');
+                this.discharged.push(patient);
+                this.patients = this.patients.filter(p => p.id != pid);
+                this.saveData();
+                this.renderAll();
+                this.updateDischargeOptions(); // 出院后刷新下拉菜单
+                bootstrap.Modal.getInstance(document.getElementById('dischargeModal')).hide();
+            }
+        });
+
+        // 横竖屏切换适配
+        window.addEventListener('orientationchange', () => {
+            // 简单的适配示例：切换时重新渲染表格和模态框
+            this.renderAll();
+        });
+    }
+
+    // 高亮选中行
+    highlightRow(row) {
+        document.querySelectorAll('.patient-row').forEach(r => r.classList.remove('highlight'));
+        row.classList.add('highlight');
+    }
+
+    // 计算天数
+    calculateDays(dateStr) {
+        if (!dateStr) return '';
+        const start = new Date(dateStr);
+        const now = new Date();
+        const diff = Math.floor((now - start) / (1000 * 60 * 60 * 24));
+        return diff >= 0 ? diff : '';
+    }
+
+    // 状态文字颜色
+    getStatusClass(status) {
+        const map = {
+            '术前': 'status-preop',
+            '术后': 'status-postop',
+            'CICU': 'status-icu',
+            'CCU': 'status-icu',
+            'NICU': 'status-icu',
+            '出院': 'status-discharged'
+        };
+        return map[status] || '';
+    }
+
+    // 过滤
+    applyFilters(patients) {
+        const name = document.getElementById('filterName').value.trim().toLowerCase();
+        const bed = document.getElementById('filterBed').value.trim().toLowerCase();
+        const status = document.getElementById('filterStatus').value;
+        const days = document.getElementById('filterDays').value;
+
+        return patients.filter(p => {
+            let match = true;
+            if (name) match = match && p.name.toLowerCase().includes(name);
+            if (bed) match = match && (p.bed || '').toLowerCase().includes(bed);
+            if (status) match = match && p.status === status;
+            if (days) {
+                const stayDays = this.calculateDays(p.admissionDate);
+                match = match && stayDays == days;
+            }
+            return match;
+        });
+    }
+
+    // 排序
+    sortPatients(patients) {
+        if (!this.sortConfig.key) return patients;
+        const key = this.sortConfig.key;
+        const asc = this.sortConfig.asc;
+        return patients.slice().sort((a, b) => {
+            let valA = a[key] || '';
+            let valB = b[key] || '';
+            // 数字字段处理
+            if (['age', 'admissionDays', 'postopDays'].includes(key)) {
+                valA = parseInt(valA) || 0;
+                valB = parseInt(valB) || 0;
+                return asc ? valA - valB : valB - valA;
+            }
+            // 日期处理
+            if (['admissionDate', 'surgeryDate'].includes(key)) {
+                valA = new Date(valA);
+                valB = new Date(valB);
+                return asc ? valA - valB : valB - valA;
+            }
+            // 字符串处理
+            valA = valA.toString().toLowerCase();
+            valB = valB.toString().toLowerCase();
+            if (valA < valB) return asc ? -1 : 1;
+            if (valA > valB) return asc ? 1 : -1;
+            return 0;
+        });
+    }
+
+    // 待办点击处理
+    handleTodoClick(patientId, tag) {
+        if (confirm(`是否完成待办 "${tag}"？`)) {
+            const patient = this.patients.find(p => p.id == patientId) ||
+                            this.discharged.find(p => p.id == patientId);
+            if (patient) {
+                patient.todos = patient.todos.filter(t => t !== tag);
+                // 出院病历完成且已出院则删除
+                if (tag === '出院病历' && patient.status === '出院' && patient.todos.length === 0) {
+                    this.discharged = this.discharged.filter(p => p.id !== patient.id);
+                }
+                this.saveData();
+                this.renderAll();
+            }
+        }
+    }
+
+    // 完成待办（列表中）
+    completeTodoTag(tag) {
+        if (confirm(`是否完成待办 "${tag}"？`)) {
+            this.patients.concat(this.discharged).forEach(p => {
+                if (p.todos.includes(tag)) {
+                    p.todos = p.todos.filter(t => t !== tag);
+                }
+            });
+            // 删除无标签且已出院的患者
+            this.discharged = this.discharged.filter(p => !(p.status === '出院' && p.todos.length === 0));
+            this.saveData();
+            this.renderAll();
+        }
+    }
+
+    // 更新出院下拉列表
+    updateDischargeOptions() {
+        const select = document.getElementById('dischargeSelect');
+        select.innerHTML = '<option value="">请选择患者</option>';
+        this.patients.filter(p => p.status !== '出院').forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = `${p.name} (${p.bed})`;
+            select.appendChild(opt);
+        });
+    }
+
+    // 为特定表格中的待办标签添加点击事件
+    attachTodoTagListeners(containerSelector) {
+        document.querySelectorAll(`${containerSelector} .todo-tag`).forEach(tagEl => {
+            const patientId = tagEl.dataset.patient;
+            const tag = tagEl.dataset.tag;
+            tagEl.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.handleTodoClick(patientId, tag);
+            });
+        });
+    }
+
+    // CSV 解析与导入
+    addPatientsFromCSV(csvContent) {
+        const lines = csvContent.trim().split('\n');
+        let addedCount = 0;
+        let errorCount = 0;
+        const today = new Date().toISOString().split('T')[0]; // 默认住院日期为今天
+        
+        lines.forEach((line, index) => {
+            // 跳过空行
+            if (!line.trim()) return;
+            
+            // CSV 可能包含引号，需要处理
+            const parts = line.split(',').map(p => p.trim().replace(/^"|"$/g, ''));
+            if (parts.length < 6) {
+                console.warn(`第 ${index + 1} 行数据格式不正确，已跳过`);
+                errorCount++;
+                return;
+            }
+            const [name, gender, age, caseNumber, bed, diagnosis] = parts;
+            
+            // 检查必填字段
+            if (!name || !caseNumber) {
+                console.warn(`第 ${index + 1} 行缺少必填字段（姓名或病案号），已跳过`);
+                errorCount++;
+                return;
+            }
+            
+            // 跳过已存在的病案号
+            if (this.findPatientByCase(caseNumber)) {
+                console.warn(`第 ${index + 1} 行病案号 ${caseNumber} 已存在，已跳过`);
+                errorCount++;
+                return;
+            }
+            
+            const patient = {
+                id: Date.now() + index, // 防止 ID 冲突
+                name,
+                gender,
+                age: age ? parseInt(age) : '',
+                caseNumber,
+                bed,
+                diagnosis,
+                doctor: '',
+                admissionDate: today,
+                surgeryDate: '',
+                surgeryName: '',
+                status: "术前",
+                remark: '',
+                todos: ["新入"]
+            };
+            this.patients.push(patient);
+            addedCount++;
+        });
+        
+        this.saveData();
+        this.renderAll();
+        this.updateDischargeOptions();
+        alert(`CSV 导入完成：成功添加 ${addedCount} 条记录，${errorCount} 条记录因错误被跳过。`);
+    }
+
+    findPatientByCase(caseNumber) {
+        return this.patients.find(p => p.caseNumber === caseNumber) ||
+               this.discharged.find(p => p.caseNumber === caseNumber);
+    }
+}
+
+// 初始化应用
+document.addEventListener('DOMContentLoaded', () => {
+    new HospitalApp();
+});
+</script>
+
+</body>
+</html>
