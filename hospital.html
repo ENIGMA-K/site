@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>住院患者管理系统 v1.2</title>
+    <title>住院患者管理系统 v1.3</title>
     <!-- 优化视口设置，确保在移动设备上能正确缩放 -->
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta name="theme-color" content="#0d6efd">
@@ -21,11 +21,11 @@
         .modal-body label { font-weight: bold; }
         .todo-item:hover { background-color: #f8f9fa; cursor: pointer; }
 
-        /* 状态颜色 */
-        .status-preop { color: orange; }       /* 术前 */
-        .status-postop { color: green; }       /* 术后 */
-        .status-icu { color: red; }            /* 各个监护室 */
-        .status-discharged { color: black; }  /* 出院 */
+        /* 状态颜色 - 按新要求修改 */
+        .status-preop { color: #003366; }       /* 术前 藏蓝色 */
+        .status-postop { color: #006400; }      /* 术后 墨绿色 */
+        .status-icu { color: #8B0000; }         /* 监护室 暗红色 */
+        .status-discharged { color: #000000; }  /* 出院 黑色 */
 
         /* 移动端优化 */
         @media (max-width: 768px) {
@@ -277,7 +277,7 @@
         }
     </style>
 
-    <!-- ===== 新增样式：控制表格文字换行，满足要求2 ===== -->
+    <!-- 换行控制样式 -->
     <style>
         /* 表头强制不换行 */
         #patientTable th,
@@ -325,19 +325,27 @@
         /* 备注单元格点击样式提示 */
         .remark-cell {
             cursor: pointer;
-            background-color: #fef9e7; /* 极淡黄色提示可点击，仅在悬浮时显示，不干扰原有背景 */
+            background-color: #fef9e7;
         }
         .remark-cell:hover {
             background-color: #f8f3d6;
         }
+
+        /* 为可双击打开更新状态的单元格添加指针样式提示 */
+        .double-clickable {
+            cursor: pointer;
+        }
+        .double-clickable:hover {
+            text-decoration: underline;
+            background-color: #e9ecef;
+        }
     </style>
-    <!-- ===== 换行控制样式结束 ===== -->
 </head>
 
 <body class="bg-light">
 
 <div class="container-fluid py-2">
-    <h5 class="text-center mb-2">住院患者管理系统</h5>
+    <h5 class="text-center mb-2">住院患者管理系统 v1.3</h5>
     
     <!-- 操作栏 -->
     <div class="row mb-2 g-2 operation-bar">
@@ -524,12 +532,11 @@
                     <label>待办内容</label>
                     <input type="text" class="form-control" id="newTodoContent" placeholder="请输入待办标签名称">
                 </div>
-                <!-- ===== 新增常用标签区域 ===== -->
+                <!-- 常用标签区域 -->
                 <div class="mb-2">
                     <label>常用标签</label>
                     <div id="commonTagsContainer"></div>
                 </div>
-                <!-- ===== 结束 ===== -->
                 <div class="mb-2">
                     <label>待办颜色</label>
                     <input type="color" class="form-control form-control-color" id="newTodoColor" value="#ff0000">
@@ -610,7 +617,7 @@
     </div>
 </div>
 
-<!-- ===== 新增：备注编辑弹窗 ===== -->
+<!-- 备注编辑弹窗 -->
 <div class="modal fade" id="editRemarkModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -661,12 +668,11 @@ class HospitalApp {
             this.discharged = data.discharged || [];
             this.tags = data.tags || this.tags;
         }
-        // 加载后自动清理无待办出院患者（兼容旧数据）
+        // 加载后自动清理无待办出院患者
         this.cleanDischarged();
     }
 
     saveData() {
-        // 先清理出院患者中无待办的记录
         this.cleanDischarged();
         localStorage.setItem('hospitalData', JSON.stringify({
             patients: this.patients,
@@ -675,7 +681,6 @@ class HospitalApp {
         }));
     }
 
-    // 新增：移除出院患者中 todos 为空的记录
     cleanDischarged() {
         this.discharged = this.discharged.filter(p => p.todos && p.todos.length > 0);
     }
@@ -712,7 +717,6 @@ class HospitalApp {
     populateBedSelect(selectId) {
         const select = document.getElementById(selectId);
         select.innerHTML = '';
-        // 01床~60床
         for (let i = 1; i <= 60; i++) {
             const num = i.toString().padStart(2, '0');
             const option = document.createElement('option');
@@ -720,14 +724,12 @@ class HospitalApp {
             option.textContent = `${num}床`;
             select.appendChild(option);
         }
-        // Z1床~Z10床
         for (let i = 1; i <= 10; i++) {
             const option = document.createElement('option');
             option.value = `Z${i}床`;
             option.textContent = `Z${i}床`;
             select.appendChild(option);
         }
-        // +01床~+20床
         for (let i = 1; i <= 20; i++) {
             const num = i.toString().padStart(2, '0');
             const option = document.createElement('option');
@@ -739,7 +741,6 @@ class HospitalApp {
 
     // ------------------- 渲染 -------------------
     renderAll() {
-        // 确保出院患者无空标签
         this.cleanDischarged();
         this.renderPatients();
         this.renderDischarged();
@@ -747,7 +748,6 @@ class HospitalApp {
         this.renderTagSettings();
         this.renderUpdateSelect();
         this.renderTodoPatientList();
-        // 如果添加待办弹窗是打开的，刷新常用标签（通过事件监听，但这里也主动调用一下以防万一）
         if (document.getElementById('addTodoModal').classList.contains('show')) {
             this.renderCommonTags();
         }
@@ -761,44 +761,77 @@ class HospitalApp {
         sorted.forEach(p => {
             const tr = document.createElement('tr');
             tr.className = 'patient-row';
-            // 构建备注单元格（第14列），添加特殊类以便点击
-            const remarkCell = `<td class="remark-cell" data-patient-id="${p.id}">${this.escapeHtml(p.remark || '')}</td>`;
+            
+            // 构建各列（索引0-7为可双击打开更新状态的列）
+            const fields = [
+                p.name, p.gender || '', p.age || '', p.caseNumber, p.bed || '',
+                p.diagnosis || '', p.doctor || '', 
+                `<span class="${this.getStatusClass(p.status)}">${p.status}</span>`
+            ];
+            
+            let html = '';
+            fields.forEach((content, idx) => {
+                html += `<td class="double-clickable" data-patient-id="${p.id}" data-field-index="${idx}">${content}</td>`;
+            });
+            
+            // 住院日期、住院天数、手术日期、手术名称、术后天数
+            html += `<td>${p.admissionDate || ''}</td>`;
+            html += `<td>${this.calculateDays(p.admissionDate)}</td>`;
+            html += `<td>${p.surgeryDate || ''}</td>`;
+            html += `<td>${p.surgeryName || ''}</td>`;
+            html += `<td>${this.calculateDays(p.surgeryDate)}</td>`;
+            
+            // 备注列
+            html += `<td class="remark-cell" data-patient-id="${p.id}">${this.escapeHtml(p.remark || '')}</td>`;
+            
             // 待办标签列
             const todosHtml = p.todos.map(t => `<span class="todo-tag" style="background-color:${this.tags[t] || '#6c757d'}" data-tag="${t}" data-patient="${p.id}">${t}</span>`).join(' ');
-
-            tr.innerHTML = `
-                <td>${p.name}</td>
-                <td>${p.gender || ''}</td>
-                <td>${p.age || ''}</td>
-                <td>${p.caseNumber}</td>
-                <td>${p.bed || ''}</td>
-                <td>${p.diagnosis || ''}</td>
-                <td>${p.doctor || ''}</td>
-                <td class="${this.getStatusClass(p.status)}">${p.status}</td>
-                <td>${p.admissionDate || ''}</td>
-                <td>${this.calculateDays(p.admissionDate)}</td>
-                <td>${p.surgeryDate || ''}</td>
-                <td>${p.surgeryName || ''}</td>
-                <td>${this.calculateDays(p.surgeryDate)}</td>
-                ${remarkCell}
-                <td>${todosHtml}</td>
-            `;
-            tr.addEventListener('click', () => this.highlightRow(tr));
-            // 待办标签点击事件
+            html += `<td class="todo-cell" data-patient-id="${p.id}">${todosHtml}</td>`;
+            
+            tr.innerHTML = html;
+            
+            // 行单击高亮
+            tr.addEventListener('click', (e) => {
+                // 避免点击可编辑元素时也触发行高亮（但保留）
+                this.highlightRow(tr);
+            });
+            
+            // 为可双击列添加双击事件
+            tr.querySelectorAll('.double-clickable').forEach(td => {
+                td.addEventListener('dblclick', (e) => {
+                    e.stopPropagation();
+                    const patientId = td.dataset.patientId;
+                    this.openUpdateStatusForPatient(patientId);
+                });
+            });
+            
+            // 待办标签单击事件
             tr.querySelectorAll('.todo-tag').forEach(tagEl => {
                 tagEl.addEventListener('click', (e) => {
                     e.stopPropagation();
                     this.handleTodoClick(p.id, tagEl.dataset.tag);
                 });
             });
-            // 备注单元格点击事件（直接编辑）
+            
+            // 待办标签列双击事件（未点中标签时打开添加待办）
+            const todoCell = tr.querySelector('.todo-cell');
+            todoCell.addEventListener('dblclick', (e) => {
+                e.stopPropagation();
+                // 如果双击的目标是标签本身，不处理（保留标签单击行为）
+                if (e.target.classList.contains('todo-tag')) {
+                    return;
+                }
+                // 否则打开添加待办弹窗，并勾选当前患者
+                this.openAddTodoForPatient(p.id);
+            });
+            
+            // 备注单元格单击编辑
             const remarkTd = tr.querySelector('.remark-cell');
-            if (remarkTd) {
-                remarkTd.addEventListener('click', (e) => {
-                    e.stopPropagation(); // 阻止行高亮
-                    this.openRemarkEdit(p.id, p.remark);
-                });
-            }
+            remarkTd.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.openRemarkEdit(p.id, p.remark);
+            });
+            
             tbody.appendChild(tr);
         });
     }
@@ -808,55 +841,93 @@ class HospitalApp {
         tbody.innerHTML = '';
         this.discharged.forEach(p => {
             const tr = document.createElement('tr');
-            const remarkCell = `<td class="remark-cell" data-patient-id="${p.id}">${this.escapeHtml(p.remark || '')}</td>`;
+            
+            const fields = [
+                p.name, p.gender || '', p.age || '', p.caseNumber, p.bed || '',
+                p.diagnosis || '', p.doctor || '',
+                `<span class="${this.getStatusClass(p.status)}">${p.status}</span>`
+            ];
+            
+            let html = '';
+            fields.forEach((content, idx) => {
+                html += `<td class="double-clickable" data-patient-id="${p.id}" data-field-index="${idx}">${content}</td>`;
+            });
+            
+            html += `<td>${p.admissionDate || ''}</td>`;
+            html += `<td>${this.calculateDays(p.admissionDate)}</td>`;
+            html += `<td>${p.surgeryDate || ''}</td>`;
+            html += `<td>${p.surgeryName || ''}</td>`;
+            html += `<td>${this.calculateDays(p.surgeryDate)}</td>`;
+            html += `<td class="remark-cell" data-patient-id="${p.id}">${this.escapeHtml(p.remark || '')}</td>`;
+            
             const todosHtml = p.todos.map(t => `<span class="todo-tag" style="background-color:${this.tags[t] || '#6c757d'}" data-tag="${t}" data-patient="${p.id}">${t}</span>`).join(' ');
-            tr.innerHTML = `
-                <td>${p.name}</td>
-                <td>${p.gender || ''}</td>
-                <td>${p.age || ''}</td>
-                <td>${p.caseNumber}</td>
-                <td>${p.bed || ''}</td>
-                <td>${p.diagnosis || ''}</td>
-                <td>${p.doctor || ''}</td>
-                <td class="${this.getStatusClass(p.status)}">${p.status}</td>
-                <td>${p.admissionDate || ''}</td>
-                <td>${this.calculateDays(p.admissionDate)}</td>
-                <td>${p.surgeryDate || ''}</td>
-                <td>${p.surgeryName || ''}</td>
-                <td>${this.calculateDays(p.surgeryDate)}</td>
-                ${remarkCell}
-                <td>${todosHtml}</td>
-            `;
-            // 出院患者无需行点击高亮（保留原有交互？也可不加，但保持统一）
-            // 待办标签点击事件
+            html += `<td class="todo-cell" data-patient-id="${p.id}">${todosHtml}</td>`;
+            
+            tr.innerHTML = html;
+            
+            // 双击可更新列
+            tr.querySelectorAll('.double-clickable').forEach(td => {
+                td.addEventListener('dblclick', (e) => {
+                    e.stopPropagation();
+                    const patientId = td.dataset.patientId;
+                    this.openUpdateStatusForPatient(patientId);
+                });
+            });
+            
+            // 待办标签单击
             tr.querySelectorAll('.todo-tag').forEach(tagEl => {
                 tagEl.addEventListener('click', (e) => {
                     e.stopPropagation();
                     this.handleTodoClick(p.id, tagEl.dataset.tag);
                 });
             });
-            // 备注单元格点击
+            
+            // 待办列双击
+            const todoCell = tr.querySelector('.todo-cell');
+            todoCell.addEventListener('dblclick', (e) => {
+                e.stopPropagation();
+                if (e.target.classList.contains('todo-tag')) return;
+                this.openAddTodoForPatient(p.id);
+            });
+            
+            // 备注单击编辑
             const remarkTd = tr.querySelector('.remark-cell');
-            if (remarkTd) {
-                remarkTd.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.openRemarkEdit(p.id, p.remark);
-                });
-            }
+            remarkTd.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.openRemarkEdit(p.id, p.remark);
+            });
+            
             tbody.appendChild(tr);
         });
     }
 
-    // 简单转义HTML，防止XSS
-    escapeHtml(text) {
-        if (!text) return '';
-        return String(text).replace(/[&<>"]/g, function(m) {
-            if (m === '&') return '&amp;';
-            if (m === '<') return '&lt;';
-            if (m === '>') return '&gt;';
-            if (m === '"') return '&quot;';
-            return m;
-        });
+    // 打开更新状态弹窗并预选患者
+    openUpdateStatusForPatient(patientId) {
+        // 查找患者（可能在院或出院？但出院患者不应在更新状态弹窗中，所以只考虑在院）
+        const patient = this.patients.find(p => p.id == patientId);
+        if (!patient) {
+            alert('该患者已出院，无法更新状态');
+            return;
+        }
+        const select = document.getElementById('updateSelect');
+        select.value = patientId;
+        // 手动触发change事件，填充表单
+        select.dispatchEvent(new Event('change'));
+        // 打开模态框
+        const modal = new bootstrap.Modal(document.getElementById('updateStatusModal'));
+        modal.show();
+    }
+
+    // 打开添加待办弹窗，并勾选指定患者
+    openAddTodoForPatient(patientId) {
+        // 先确保待办患者列表已渲染
+        this.renderTodoPatientList(); // 重新渲染以确保最新
+        const checkbox = document.getElementById(`todoPatient${patientId}`);
+        if (checkbox) {
+            checkbox.checked = true;
+        }
+        const modal = new bootstrap.Modal(document.getElementById('addTodoModal'));
+        modal.show();
     }
 
     renderTodoList() {
@@ -925,7 +996,6 @@ class HospitalApp {
         });
     }
 
-    // ===== 新增：渲染常用标签按钮 =====
     renderCommonTags() {
         const container = document.getElementById('commonTagsContainer');
         if (!container) return;
@@ -940,16 +1010,14 @@ class HospitalApp {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
                 document.getElementById('newTodoContent').value = tagName;
-                // 可选：同时将颜色选择器设为该标签颜色
                 document.getElementById('newTodoColor').value = color;
             });
             container.appendChild(btn);
         });
     }
 
-    // ------------------- 交互 -------------------
+    // ------------------- 事件绑定 -------------------
     initEvents() {
-        // 添加患者
         document.getElementById('savePatientBtn').addEventListener('click', () => {
             const form = document.getElementById('addPatientForm');
             const data = Object.fromEntries(new FormData(form).entries());
@@ -959,11 +1027,9 @@ class HospitalApp {
             }
         });
 
-        // 过滤
         document.querySelectorAll('#filterName, #filterBed, #filterStatus, #filterDays')
             .forEach(el => el.addEventListener('input', () => this.renderPatients()));
 
-        // 排序
         document.querySelectorAll('.sortable').forEach(th => {
             th.addEventListener('click', () => {
                 const key = th.dataset.key;
@@ -977,7 +1043,6 @@ class HospitalApp {
             });
         });
 
-        // 导出 JSON
         document.getElementById('exportBtn').addEventListener('click', () => {
             const dataStr = JSON.stringify({
                 patients: this.patients,
@@ -993,7 +1058,6 @@ class HospitalApp {
             URL.revokeObjectURL(url);
         });
 
-        // 导入 JSON
         document.getElementById('importBtn').addEventListener('click', () => {
             document.getElementById('fileInput').click();
         });
@@ -1017,7 +1081,6 @@ class HospitalApp {
             reader.readAsText(file);
         });
 
-        // CSV 导入
         document.getElementById('csvImportBtn').addEventListener('click', () => {
             document.getElementById('csvFileInput').click();
         });
@@ -1031,7 +1094,6 @@ class HospitalApp {
             reader.readAsText(file);
         });
 
-        // 管理标签
         document.getElementById('addTagBtn').addEventListener('click', () => {
             const name = document.getElementById('newTagName').value.trim();
             const color = document.getElementById('newTagColor').value;
@@ -1067,19 +1129,16 @@ class HospitalApp {
             }
         });
 
-        // 更新状态
         document.getElementById('updateSelect').addEventListener('change', (e) => {
             const pid = e.target.value;
             if (!pid) return;
             const patient = this.patients.find(p => p.id == pid);
             if (!patient) return;
             const form = document.getElementById('updatePatientForm');
-            // 填充表单
             Object.keys(patient).forEach(key => {
                 const input = form.querySelector(`[name="${key}"]`);
                 if (input) input.value = patient[key];
             });
-            // 状态提示
             const alertBox = document.getElementById('statusAlert');
             alertBox.classList.toggle('d-none', patient.status !== '出院');
         });
@@ -1090,18 +1149,15 @@ class HospitalApp {
             const form = document.getElementById('updatePatientForm');
             const data = Object.fromEntries(new FormData(form).entries());
 
-            // 检查病案号唯一性（排除自身）
             const existing = this.findPatientByCase(data.caseNumber);
             if (existing && existing.id !== patient.id) {
                 alert('病案号已存在，请检查！');
                 return;
             }
 
-            // 更新信息
             Object.assign(patient, data);
             this.saveData();
 
-            // 如果状态改为出院，自动转移
             if (patient.status === '出院') {
                 patient.todos.push('出院病历');
                 this.discharged.push(patient);
@@ -1114,15 +1170,12 @@ class HospitalApp {
             bootstrap.Modal.getInstance(document.getElementById('updateStatusModal')).hide();
         });
 
-        // 添加待办
         document.getElementById('addTodoConfirmBtn').addEventListener('click', () => {
             const checked = Array.from(document.querySelectorAll('#todoPatientList input:checked'));
             const tag = document.getElementById('newTodoContent').value.trim();
             const color = document.getElementById('newTodoColor').value;
             if (!tag) return;
-            // 添加标签颜色
             this.tags[tag] = color;
-            // 添加到患者
             checked.forEach(cb => {
                 const pid = parseInt(cb.value);
                 const patient = this.patients.find(p => p.id === pid);
@@ -1135,7 +1188,6 @@ class HospitalApp {
             bootstrap.Modal.getInstance(document.getElementById('addTodoModal')).hide();
         });
 
-        // 患者出院
         document.getElementById('confirmDischargeBtn').addEventListener('click', () => {
             const pid = document.getElementById('dischargeSelect').value;
             if (!pid) return;
@@ -1147,29 +1199,24 @@ class HospitalApp {
                 this.patients = this.patients.filter(p => p.id != pid);
                 this.saveData();
                 this.renderAll();
-                this.updateDischargeOptions(); // 出院后刷新下拉菜单
+                this.updateDischargeOptions();
                 bootstrap.Modal.getInstance(document.getElementById('dischargeModal')).hide();
             }
         });
 
-        // 横竖屏切换适配
         window.addEventListener('orientationchange', () => {
-            // 简单的适配示例：切换时重新渲染表格和模态框
             this.renderAll();
         });
 
-        // ===== 新增：监听添加待办弹窗显示，刷新常用标签 =====
         document.getElementById('addTodoModal').addEventListener('show.bs.modal', () => {
             this.renderCommonTags();
         });
 
-        // ===== 新增：备注编辑保存 =====
         document.getElementById('saveRemarkBtn').addEventListener('click', () => {
             const newRemark = document.getElementById('remarkEditTextarea').value;
             const patientId = this.currentEditRemarkPatientId;
             if (!patientId) return;
 
-            // 在 patients 和 discharged 中查找
             let patient = this.patients.find(p => p.id == patientId);
             if (!patient) patient = this.discharged.find(p => p.id == patientId);
             if (patient) {
@@ -1177,19 +1224,16 @@ class HospitalApp {
                 this.saveData();
                 this.renderAll();
             }
-            // 关闭模态框
             bootstrap.Modal.getInstance(document.getElementById('editRemarkModal')).hide();
             this.currentEditRemarkPatientId = null;
         });
     }
 
-    // 高亮选中行
     highlightRow(row) {
         document.querySelectorAll('.patient-row').forEach(r => r.classList.remove('highlight'));
         row.classList.add('highlight');
     }
 
-    // 计算天数
     calculateDays(dateStr) {
         if (!dateStr) return '';
         const start = new Date(dateStr);
@@ -1198,7 +1242,6 @@ class HospitalApp {
         return diff >= 0 ? diff : '';
     }
 
-    // 状态文字颜色
     getStatusClass(status) {
         const map = {
             '术前': 'status-preop',
@@ -1211,7 +1254,6 @@ class HospitalApp {
         return map[status] || '';
     }
 
-    // 过滤
     applyFilters(patients) {
         const name = document.getElementById('filterName').value.trim().toLowerCase();
         const bed = document.getElementById('filterBed').value.trim().toLowerCase();
@@ -1231,7 +1273,6 @@ class HospitalApp {
         });
     }
 
-    // 排序
     sortPatients(patients) {
         if (!this.sortConfig.key) return patients;
         const key = this.sortConfig.key;
@@ -1239,19 +1280,16 @@ class HospitalApp {
         return patients.slice().sort((a, b) => {
             let valA = a[key] || '';
             let valB = b[key] || '';
-            // 数字字段处理
             if (['age', 'admissionDays', 'postopDays'].includes(key)) {
                 valA = parseInt(valA) || 0;
                 valB = parseInt(valB) || 0;
                 return asc ? valA - valB : valB - valA;
             }
-            // 日期处理
             if (['admissionDate', 'surgeryDate'].includes(key)) {
                 valA = new Date(valA);
                 valB = new Date(valB);
                 return asc ? valA - valB : valB - valA;
             }
-            // 字符串处理
             valA = valA.toString().toLowerCase();
             valB = valB.toString().toLowerCase();
             if (valA < valB) return asc ? -1 : 1;
@@ -1260,21 +1298,18 @@ class HospitalApp {
         });
     }
 
-    // 待办点击处理
     handleTodoClick(patientId, tag) {
         if (confirm(`是否完成待办 "${tag}"？`)) {
             const patient = this.patients.find(p => p.id == patientId) ||
                             this.discharged.find(p => p.id == patientId);
             if (patient) {
                 patient.todos = patient.todos.filter(t => t !== tag);
-                // 出院病历完成且已出院则删除（cleanDischarged会在saveData时自动处理）
                 this.saveData();
                 this.renderAll();
             }
         }
     }
 
-    // 完成待办（列表中）
     completeTodoTag(tag) {
         if (confirm(`是否完成待办 "${tag}"？`)) {
             this.patients.concat(this.discharged).forEach(p => {
@@ -1282,12 +1317,11 @@ class HospitalApp {
                     p.todos = p.todos.filter(t => t !== tag);
                 }
             });
-            this.saveData();  // saveData会清理无待办的出院患者
+            this.saveData();
             this.renderAll();
         }
     }
 
-    // 更新出院下拉列表
     updateDischargeOptions() {
         const select = document.getElementById('dischargeSelect');
         select.innerHTML = '<option value="">请选择患者</option>';
@@ -1299,7 +1333,6 @@ class HospitalApp {
         });
     }
 
-    // 为特定表格中的待办标签添加点击事件（已单独处理，此方法可能冗余，保留以备调用）
     attachTodoTagListeners(containerSelector) {
         document.querySelectorAll(`${containerSelector} .todo-tag`).forEach(tagEl => {
             const patientId = tagEl.dataset.patient;
@@ -1311,18 +1344,15 @@ class HospitalApp {
         });
     }
 
-    // CSV 解析与导入
     addPatientsFromCSV(csvContent) {
         const lines = csvContent.trim().split('\n');
         let addedCount = 0;
         let errorCount = 0;
-        const today = new Date().toISOString().split('T')[0]; // 默认住院日期为今天
+        const today = new Date().toISOString().split('T')[0];
         
         lines.forEach((line, index) => {
-            // 跳过空行
             if (!line.trim()) return;
             
-            // CSV 可能包含引号，需要处理
             const parts = line.split(',').map(p => p.trim().replace(/^"|"$/g, ''));
             if (parts.length < 6) {
                 console.warn(`第 ${index + 1} 行数据格式不正确，已跳过`);
@@ -1331,14 +1361,12 @@ class HospitalApp {
             }
             const [name, gender, age, caseNumber, bed, diagnosis] = parts;
             
-            // 检查必填字段
             if (!name || !caseNumber) {
                 console.warn(`第 ${index + 1} 行缺少必填字段（姓名或病案号），已跳过`);
                 errorCount++;
                 return;
             }
             
-            // 跳过已存在的病案号
             if (this.findPatientByCase(caseNumber)) {
                 console.warn(`第 ${index + 1} 行病案号 ${caseNumber} 已存在，已跳过`);
                 errorCount++;
@@ -1346,7 +1374,7 @@ class HospitalApp {
             }
             
             const patient = {
-                id: Date.now() + index, // 防止 ID 冲突
+                id: Date.now() + index,
                 name,
                 gender,
                 age: age ? parseInt(age) : '',
@@ -1376,16 +1404,25 @@ class HospitalApp {
                this.discharged.find(p => p.caseNumber === caseNumber);
     }
 
-    // 打开备注编辑弹窗
     openRemarkEdit(patientId, currentRemark) {
         this.currentEditRemarkPatientId = patientId;
         document.getElementById('remarkEditTextarea').value = currentRemark || '';
         const modal = new bootstrap.Modal(document.getElementById('editRemarkModal'));
         modal.show();
     }
+
+    escapeHtml(text) {
+        if (!text) return '';
+        return String(text).replace(/[&<>"]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            if (m === '"') return '&quot;';
+            return m;
+        });
+    }
 }
 
-// 初始化应用
 document.addEventListener('DOMContentLoaded', () => {
     new HospitalApp();
 });
