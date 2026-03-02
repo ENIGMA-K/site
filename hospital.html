@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>住院患者管理系统</title>
+    <title>住院患者管理系统 v1.2</title>
     <!-- 优化视口设置，确保在移动设备上能正确缩放 -->
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta name="theme-color" content="#0d6efd">
@@ -174,12 +174,6 @@
             /* 出院患者列表同等待遇 */
             #dischargedTable td {
                 padding: 12px 6px;
-                white-space: nowrap; /* 配合横向滚动 */
-            }
-
-            /* 所有表格单元保持不换行，依靠横向滚动 */
-            .table td {
-                white-space: nowrap;
             }
 
             /* 移除可能因缩放产生的模糊 */
@@ -282,6 +276,62 @@
             }
         }
     </style>
+
+    <!-- ===== 新增样式：控制表格文字换行，满足要求2 ===== -->
+    <style>
+        /* 表头强制不换行 */
+        #patientTable th,
+        #dischargedTable th {
+            white-space: nowrap;
+        }
+
+        /* 默认所有单元格强制不换行（配合横向滚动） */
+        #patientTable td,
+        #dischargedTable td {
+            white-space: nowrap;
+        }
+
+        /* 备注列（第14列）允许换行 */
+        #patientTable td:nth-child(14),
+        #dischargedTable td:nth-child(14) {
+            white-space: pre-wrap;    /* 保留换行符并自动换行 */
+            word-break: break-word;   /* 避免长单词溢出 */
+            max-width: 200px;         /* 限制最大宽度，防止过宽影响滚动体验 */
+            min-width: 120px;
+        }
+
+        /* 待办标签列（第15列）允许换行，但标签内部不换行（由.todo-tag的white-space: nowrap保证） */
+        #patientTable td:nth-child(15),
+        #dischargedTable td:nth-child(15) {
+            white-space: normal;      /* 多个标签可以折行 */
+            word-break: normal;
+        }
+
+        /* 待办标签内部强制不换行 */
+        .todo-tag {
+            white-space: nowrap !important;
+            display: inline-block;
+            max-width: none;
+        }
+
+        /* 出院表格同样适用 */
+        #dischargedTable td:nth-child(14) {
+            white-space: pre-wrap;
+        }
+        #dischargedTable td:nth-child(15) {
+            white-space: normal;
+        }
+
+        /* 备注单元格点击样式提示 */
+        .remark-cell {
+            cursor: pointer;
+            background-color: #fef9e7; /* 极淡黄色提示可点击，仅在悬浮时显示，不干扰原有背景 */
+        }
+        .remark-cell:hover {
+            background-color: #f8f3d6;
+        }
+    </style>
+    <!-- ===== 换行控制样式结束 ===== -->
 </head>
 
 <body class="bg-light">
@@ -560,6 +610,25 @@
     </div>
 </div>
 
+<!-- ===== 新增：备注编辑弹窗 ===== -->
+<div class="modal fade" id="editRemarkModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">编辑备注</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <textarea id="remarkEditTextarea" class="form-control" rows="4" placeholder="可输入多行备注..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="saveRemarkBtn">保存</button>
+                <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- 引入Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -573,6 +642,8 @@ class HospitalApp {
             "出院病历": "#007BFF"
         };
         this.sortConfig = { key: null, asc: true };
+        this.currentEditRemarkPatientId = null; // 用于备注编辑
+
         this.loadData();
         this.initEvents();
         this.renderAll();
@@ -690,6 +761,11 @@ class HospitalApp {
         sorted.forEach(p => {
             const tr = document.createElement('tr');
             tr.className = 'patient-row';
+            // 构建备注单元格（第14列），添加特殊类以便点击
+            const remarkCell = `<td class="remark-cell" data-patient-id="${p.id}">${this.escapeHtml(p.remark || '')}</td>`;
+            // 待办标签列
+            const todosHtml = p.todos.map(t => `<span class="todo-tag" style="background-color:${this.tags[t] || '#6c757d'}" data-tag="${t}" data-patient="${p.id}">${t}</span>`).join(' ');
+
             tr.innerHTML = `
                 <td>${p.name}</td>
                 <td>${p.gender || ''}</td>
@@ -704,8 +780,8 @@ class HospitalApp {
                 <td>${p.surgeryDate || ''}</td>
                 <td>${p.surgeryName || ''}</td>
                 <td>${this.calculateDays(p.surgeryDate)}</td>
-                <td>${p.remark || ''}</td>
-                <td>${p.todos.map(t => `<span class="todo-tag" style="background-color:${this.tags[t] || '#6c757d'}" data-tag="${t}" data-patient="${p.id}">${t}</span>`).join(' ')}</td>
+                ${remarkCell}
+                <td>${todosHtml}</td>
             `;
             tr.addEventListener('click', () => this.highlightRow(tr));
             // 待办标签点击事件
@@ -715,6 +791,14 @@ class HospitalApp {
                     this.handleTodoClick(p.id, tagEl.dataset.tag);
                 });
             });
+            // 备注单元格点击事件（直接编辑）
+            const remarkTd = tr.querySelector('.remark-cell');
+            if (remarkTd) {
+                remarkTd.addEventListener('click', (e) => {
+                    e.stopPropagation(); // 阻止行高亮
+                    this.openRemarkEdit(p.id, p.remark);
+                });
+            }
             tbody.appendChild(tr);
         });
     }
@@ -724,6 +808,8 @@ class HospitalApp {
         tbody.innerHTML = '';
         this.discharged.forEach(p => {
             const tr = document.createElement('tr');
+            const remarkCell = `<td class="remark-cell" data-patient-id="${p.id}">${this.escapeHtml(p.remark || '')}</td>`;
+            const todosHtml = p.todos.map(t => `<span class="todo-tag" style="background-color:${this.tags[t] || '#6c757d'}" data-tag="${t}" data-patient="${p.id}">${t}</span>`).join(' ');
             tr.innerHTML = `
                 <td>${p.name}</td>
                 <td>${p.gender || ''}</td>
@@ -738,13 +824,39 @@ class HospitalApp {
                 <td>${p.surgeryDate || ''}</td>
                 <td>${p.surgeryName || ''}</td>
                 <td>${this.calculateDays(p.surgeryDate)}</td>
-                <td>${p.remark || ''}</td>
-                <td>${p.todos.map(t => `<span class="todo-tag" style="background-color:${this.tags[t] || '#6c757d'}" data-tag="${t}" data-patient="${p.id}">${t}</span>`).join(' ')}</td>
+                ${remarkCell}
+                <td>${todosHtml}</td>
             `;
+            // 出院患者无需行点击高亮（保留原有交互？也可不加，但保持统一）
+            // 待办标签点击事件
+            tr.querySelectorAll('.todo-tag').forEach(tagEl => {
+                tagEl.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.handleTodoClick(p.id, tagEl.dataset.tag);
+                });
+            });
+            // 备注单元格点击
+            const remarkTd = tr.querySelector('.remark-cell');
+            if (remarkTd) {
+                remarkTd.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.openRemarkEdit(p.id, p.remark);
+                });
+            }
             tbody.appendChild(tr);
         });
-        // 为出院患者的待办标签添加点击事件
-        this.attachTodoTagListeners('#dischargedList');
+    }
+
+    // 简单转义HTML，防止XSS
+    escapeHtml(text) {
+        if (!text) return '';
+        return String(text).replace(/[&<>"]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            if (m === '"') return '&quot;';
+            return m;
+        });
     }
 
     renderTodoList() {
@@ -1050,6 +1162,25 @@ class HospitalApp {
         document.getElementById('addTodoModal').addEventListener('show.bs.modal', () => {
             this.renderCommonTags();
         });
+
+        // ===== 新增：备注编辑保存 =====
+        document.getElementById('saveRemarkBtn').addEventListener('click', () => {
+            const newRemark = document.getElementById('remarkEditTextarea').value;
+            const patientId = this.currentEditRemarkPatientId;
+            if (!patientId) return;
+
+            // 在 patients 和 discharged 中查找
+            let patient = this.patients.find(p => p.id == patientId);
+            if (!patient) patient = this.discharged.find(p => p.id == patientId);
+            if (patient) {
+                patient.remark = newRemark;
+                this.saveData();
+                this.renderAll();
+            }
+            // 关闭模态框
+            bootstrap.Modal.getInstance(document.getElementById('editRemarkModal')).hide();
+            this.currentEditRemarkPatientId = null;
+        });
     }
 
     // 高亮选中行
@@ -1168,7 +1299,7 @@ class HospitalApp {
         });
     }
 
-    // 为特定表格中的待办标签添加点击事件
+    // 为特定表格中的待办标签添加点击事件（已单独处理，此方法可能冗余，保留以备调用）
     attachTodoTagListeners(containerSelector) {
         document.querySelectorAll(`${containerSelector} .todo-tag`).forEach(tagEl => {
             const patientId = tagEl.dataset.patient;
@@ -1243,6 +1374,14 @@ class HospitalApp {
     findPatientByCase(caseNumber) {
         return this.patients.find(p => p.caseNumber === caseNumber) ||
                this.discharged.find(p => p.caseNumber === caseNumber);
+    }
+
+    // 打开备注编辑弹窗
+    openRemarkEdit(patientId, currentRemark) {
+        this.currentEditRemarkPatientId = patientId;
+        document.getElementById('remarkEditTextarea').value = currentRemark || '';
+        const modal = new bootstrap.Modal(document.getElementById('editRemarkModal'));
+        modal.show();
     }
 }
 
