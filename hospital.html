@@ -246,6 +246,42 @@
     </style>
     <!-- ========== 移动端增强样式结束 ========== -->
 
+    <!-- 新增样式：常用标签按钮区域 -->
+    <style>
+        #commonTagsContainer {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+            margin-bottom: 5px;
+        }
+        #commonTagsContainer .tag-btn {
+            border: none;
+            border-radius: 30px;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: 0.1s;
+            background-color: #6c757d; /* fallback */
+            flex: 0 0 auto;
+            min-width: 70px;
+            text-align: center;
+        }
+        #commonTagsContainer .tag-btn:active {
+            transform: scale(0.96);
+            opacity: 0.9;
+        }
+        @media (max-width: 768px) {
+            #commonTagsContainer .tag-btn {
+                padding: 10px 20px;
+                font-size: 1rem;
+                min-height: 44px;
+            }
+        }
+    </style>
 </head>
 
 <body class="bg-light">
@@ -421,7 +457,7 @@
     </div>
 </div>
 
-<!-- 添加待办弹窗 -->
+<!-- 添加待办弹窗（优化：增加常用标签） -->
 <div class="modal fade" id="addTodoModal" tabindex="-1">
     <div class="modal-dialog modal-sm">
         <div class="modal-content">
@@ -438,6 +474,12 @@
                     <label>待办内容</label>
                     <input type="text" class="form-control" id="newTodoContent" placeholder="请输入待办标签名称">
                 </div>
+                <!-- ===== 新增常用标签区域 ===== -->
+                <div class="mb-2">
+                    <label>常用标签</label>
+                    <div id="commonTagsContainer"></div>
+                </div>
+                <!-- ===== 结束 ===== -->
                 <div class="mb-2">
                     <label>待办颜色</label>
                     <input type="color" class="form-control form-control-color" id="newTodoColor" value="#ff0000">
@@ -548,14 +590,23 @@ class HospitalApp {
             this.discharged = data.discharged || [];
             this.tags = data.tags || this.tags;
         }
+        // 加载后自动清理无待办出院患者（兼容旧数据）
+        this.cleanDischarged();
     }
 
     saveData() {
+        // 先清理出院患者中无待办的记录
+        this.cleanDischarged();
         localStorage.setItem('hospitalData', JSON.stringify({
             patients: this.patients,
             discharged: this.discharged,
             tags: this.tags
         }));
+    }
+
+    // 新增：移除出院患者中 todos 为空的记录
+    cleanDischarged() {
+        this.discharged = this.discharged.filter(p => p.todos && p.todos.length > 0);
     }
 
     addPatient(data) {
@@ -617,12 +668,18 @@ class HospitalApp {
 
     // ------------------- 渲染 -------------------
     renderAll() {
+        // 确保出院患者无空标签
+        this.cleanDischarged();
         this.renderPatients();
         this.renderDischarged();
         this.renderTodoList();
         this.renderTagSettings();
         this.renderUpdateSelect();
         this.renderTodoPatientList();
+        // 如果添加待办弹窗是打开的，刷新常用标签（通过事件监听，但这里也主动调用一下以防万一）
+        if (document.getElementById('addTodoModal').classList.contains('show')) {
+            this.renderCommonTags();
+        }
     }
 
     renderPatients() {
@@ -753,6 +810,28 @@ class HospitalApp {
                 </label>
             `;
             container.appendChild(div);
+        });
+    }
+
+    // ===== 新增：渲染常用标签按钮 =====
+    renderCommonTags() {
+        const container = document.getElementById('commonTagsContainer');
+        if (!container) return;
+        container.innerHTML = '';
+        Object.keys(this.tags).forEach(tagName => {
+            const color = this.tags[tagName] || '#6c757d';
+            const btn = document.createElement('button');
+            btn.className = 'tag-btn';
+            btn.style.backgroundColor = color;
+            btn.textContent = tagName;
+            btn.setAttribute('data-tag', tagName);
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.getElementById('newTodoContent').value = tagName;
+                // 可选：同时将颜色选择器设为该标签颜色
+                document.getElementById('newTodoColor').value = color;
+            });
+            container.appendChild(btn);
         });
     }
 
@@ -966,6 +1045,11 @@ class HospitalApp {
             // 简单的适配示例：切换时重新渲染表格和模态框
             this.renderAll();
         });
+
+        // ===== 新增：监听添加待办弹窗显示，刷新常用标签 =====
+        document.getElementById('addTodoModal').addEventListener('show.bs.modal', () => {
+            this.renderCommonTags();
+        });
     }
 
     // 高亮选中行
@@ -1052,10 +1136,7 @@ class HospitalApp {
                             this.discharged.find(p => p.id == patientId);
             if (patient) {
                 patient.todos = patient.todos.filter(t => t !== tag);
-                // 出院病历完成且已出院则删除
-                if (tag === '出院病历' && patient.status === '出院' && patient.todos.length === 0) {
-                    this.discharged = this.discharged.filter(p => p.id !== patient.id);
-                }
+                // 出院病历完成且已出院则删除（cleanDischarged会在saveData时自动处理）
                 this.saveData();
                 this.renderAll();
             }
@@ -1070,9 +1151,7 @@ class HospitalApp {
                     p.todos = p.todos.filter(t => t !== tag);
                 }
             });
-            // 删除无标签且已出院的患者
-            this.discharged = this.discharged.filter(p => !(p.status === '出院' && p.todos.length === 0));
-            this.saveData();
+            this.saveData();  // saveData会清理无待办的出院患者
             this.renderAll();
         }
     }
