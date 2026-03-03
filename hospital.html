@@ -3,8 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>住院患者管理系统 v1.4.1</title>
-    <!-- 优化视口设置，确保在移动设备上能正确缩放 -->
+    <title>住院患者管理系统 v1.4.2</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta name="theme-color" content="#0d6efd">
     
@@ -23,58 +22,27 @@
 
         /* 移动端优化 */
         @media (max-width: 768px) {
-            .operation-bar .col-12 {
-                margin-bottom: 8px;
-            }
-            .table-responsive {
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-            }
-            .modal-body .col-12 {
-                margin-bottom: 8px;
-            }
+            .operation-bar .col-12 { margin-bottom: 8px; }
+            .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .modal-body .col-12 { margin-bottom: 8px; }
         }
-
         @media (max-width: 1080px) {
-            body {
-                font-size: 14px;
-            }
-            .container-fluid {
-                padding: 0.5rem;
-            }
-            .modal-content {
-                max-height: 90vh;
-                overflow-y: auto;
-            }
+            body { font-size: 14px; }
+            .container-fluid { padding: 0.5rem; }
+            .modal-content { max-height: 90vh; overflow-y: auto; }
         }
-
         @media (orientation: landscape) {
-            .container-fluid {
-                max-width: 100vw;
-                padding: 0.5rem;
-            }
-            .modal-dialog {
-                max-width: 90%;
-            }
+            .container-fluid { max-width: 100vw; padding: 0.5rem; }
+            .modal-dialog { max-width: 90%; }
         }
     </style>
 
     <!-- 移动端增强优化样式 -->
     <style>
-        * {
-            -webkit-tap-highlight-color: rgba(0, 122, 255, 0.1);
-        }
-
-        .btn-sm,
-        .form-control,
-        .form-select,
-        .todo-tag,
-        .sortable th,
-        #todoTable tbody tr,
-        .patient-row td .todo-tag {
+        * { -webkit-tap-highlight-color: rgba(0, 122, 255, 0.1); }
+        .btn-sm, .form-control, .form-select, .todo-tag, .sortable th, #todoTable tbody tr, .patient-row td .todo-tag {
             touch-action: manipulation;
         }
-
         @media (max-width: 768px) {
             .btn-sm {
                 padding: 0.5rem 0.9rem;
@@ -83,14 +51,11 @@
                 min-width: 44px;
                 border-radius: 8px;
             }
-
-            .form-control,
-            .form-select {
+            .form-control, .form-select {
                 min-height: 48px;
                 font-size: 16px;
                 padding: 0.6rem 0.75rem;
             }
-
             .todo-tag {
                 padding: 8px 14px !important;
                 margin: 3px !important;
@@ -102,97 +67,32 @@
                 font-weight: 500;
                 transition: opacity 0.1s;
             }
-            .todo-tag:active {
-                opacity: 0.7;
-            }
-
-            .sortable th {
-                padding: 14px 6px;
-            }
-
-            .operation-bar .flex-fill {
-                flex: 1 1 160px;
-                min-width: 140px;
-            }
-
-            .modal-body {
-                padding: 1.2rem 1rem;
-            }
-            .modal-body .row.g-2 > [class*="col-"] {
-                margin-bottom: 12px;
-            }
-
-            #tagSettings .form-control-color {
-                width: 48px;
-                height: 48px;
-                padding: 4px;
-            }
-            #tagSettings .btn-sm {
-                min-height: 44px;
-                min-width: 44px;
-            }
-
-            #todoTable td {
-                padding: 14px 10px;
-            }
-            #todoTable tbody tr {
-                min-height: 58px;
-            }
-
-            #dischargedTable td {
-                padding: 12px 6px;
-            }
-
-            .modal-content {
-                border-radius: 20px 20px 0 0;
-            }
-
+            .todo-tag:active { opacity: 0.7; }
+            .sortable th { padding: 14px 6px; }
+            .operation-bar .flex-fill { flex: 1 1 160px; min-width: 140px; }
+            .modal-body { padding: 1.2rem 1rem; }
+            .modal-body .row.g-2 > [class*="col-"] { margin-bottom: 12px; }
+            #tagSettings .form-control-color { width: 48px; height: 48px; padding: 4px; }
+            #tagSettings .btn-sm { min-height: 44px; min-width: 44px; }
+            #todoTable td { padding: 14px 10px; }
+            #todoTable tbody tr { min-height: 58px; }
+            #dischargedTable td { padding: 12px 6px; }
+            .modal-content { border-radius: 20px 20px 0 0; }
             @media (orientation: landscape) {
-                .modal-dialog {
-                    max-width: 85%;
-                    margin: 1.75rem auto;
-                }
-                .btn-sm {
-                    min-height: 40px;
-                }
+                .modal-dialog { max-width: 85%; margin: 1.75rem auto; }
+                .btn-sm { min-height: 40px; }
             }
         }
-
-        .patient-row:active,
-        .btn:active,
-        .sortable th:active,
-        .todo-item:active {
+        .patient-row:active, .btn:active, .sortable th:active, .todo-item:active {
             opacity: 0.75;
             background-color: rgba(0,0,0,0.03);
         }
-
-        .todo-tag {
-            transition: transform 0.1s, box-shadow 0.1s;
-            border: none;
-        }
-        .todo-tag:active {
-            transform: scale(0.96);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        }
-
-        .modal-content {
-            overflow: hidden;
-        }
-
-        #dischargedList .todo-tag {
-            padding: 8px 14px !important;
-            margin: 3px !important;
-            border-radius: 24px !important;
-        }
-
-        select.form-select option {
-            padding: 12px;
-            font-size: 16px;
-        }
-
-        #importBtn, #exportBtn, #csvImportBtn {
-            min-width: 60px;
-        }
+        .todo-tag { transition: transform 0.1s, box-shadow 0.1s; border: none; }
+        .todo-tag:active { transform: scale(0.96); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        .modal-content { overflow: hidden; }
+        #dischargedList .todo-tag { padding: 8px 14px !important; margin: 3px !important; border-radius: 24px !important; }
+        select.form-select option { padding: 12px; font-size: 16px; }
+        #importBtn, #exportBtn, #csvImportBtn { min-width: 60px; }
     </style>
 
     <!-- 常用标签按钮区域样式 -->
@@ -219,88 +119,49 @@
             min-width: 70px;
             text-align: center;
         }
-        #commonTagsContainer .tag-btn:active {
-            transform: scale(0.96);
-            opacity: 0.9;
-        }
+        #commonTagsContainer .tag-btn:active { transform: scale(0.96); opacity: 0.9; }
         @media (max-width: 768px) {
-            #commonTagsContainer .tag-btn {
-                padding: 10px 20px;
-                font-size: 1rem;
-                min-height: 44px;
-            }
+            #commonTagsContainer .tag-btn { padding: 10px 20px; font-size: 1rem; min-height: 44px; }
         }
     </style>
 
-    <!-- 换行控制 + 整行颜色样式 -->
+    <!-- 换行控制 + 强制颜色样式 -->
     <style>
         /* 表头强制不换行 */
-        #patientTable th,
-        #dischargedTable th {
-            white-space: nowrap;
-        }
+        #patientTable th, #dischargedTable th { white-space: nowrap; }
 
         /* 默认所有单元格强制不换行（配合横向滚动） */
-        #patientTable td,
-        #dischargedTable td {
-            white-space: nowrap;
-        }
+        #patientTable td, #dischargedTable td { white-space: nowrap; }
 
         /* 备注列（第14列）允许换行 */
-        #patientTable td:nth-child(14),
-        #dischargedTable td:nth-child(14) {
+        #patientTable td:nth-child(14), #dischargedTable td:nth-child(14) {
             white-space: pre-wrap;
             word-break: break-word;
             max-width: 200px;
             min-width: 120px;
         }
 
-        /* 待办标签列（第15列）允许换行，但标签内部不换行，且强制白底+黑色默认文字 */
-        #patientTable td:nth-child(15),
-        #dischargedTable td:nth-child(15) {
+        /* 待办标签列（第15列）强制白底黑字，允许换行 */
+        #patientTable td:nth-child(15), #dischargedTable td:nth-child(15) {
             white-space: normal;
             word-break: normal;
-            background-color: #ffffff !important;
-            color: #000000 !important;  /* 待办列文字黑色，不受行颜色影响 */
-        }
-
-        /* 待办标签内部强制不换行，颜色由内联样式控制 */
-        .todo-tag {
-            white-space: nowrap !important;
-            display: inline-block;
-            max-width: none;
-        }
-
-        /* 出院表格同样适用 */
-        #dischargedTable td:nth-child(14) {
-            white-space: pre-wrap;
-        }
-        #dischargedTable td:nth-child(15) {
-            white-space: normal;
             background-color: #ffffff !important;
             color: #000000 !important;
         }
 
-        /* 备注单元格点击样式提示 */
-        .remark-cell {
-            cursor: pointer;
-            background-color: inherit; /* 继承行背景，但通过内联样式覆盖 */
-        }
-        .remark-cell:hover {
-            background-color: #f8f3d6 !important;  /* 悬停时改变，但优先级低于行内联？使用important确保 */
-        }
+        /* 待办标签内部强制不换行 */
+        .todo-tag { white-space: nowrap !important; display: inline-block; max-width: none; }
 
-        /* 行内备注单元格悬停效果覆盖行背景 */
-        tr:hover .remark-cell {
-            background-color: #f8f3d6 !important;
-        }
+        /* 备注单元格点击样式 */
+        .remark-cell { cursor: pointer; }
+        .remark-cell:hover { background-color: #f8f3d6 !important; }
     </style>
 </head>
 
 <body class="bg-light">
 
 <div class="container-fluid py-2">
-    <h5 class="text-center mb-2">住院患者管理系统 v1.4.1</h5>
+    <h5 class="text-center mb-2">住院患者管理系统 v1.4.2</h5>
     
     <!-- 操作栏 -->
     <div class="row mb-2 g-2 operation-bar">
@@ -709,29 +570,13 @@ class HospitalApp {
         }
     }
 
-    // 根据状态获取行背景色
-    getStatusBackgroundColor(status) {
+    // 根据状态获取背景色和文字颜色
+    getStatusStyle(status) {
         switch (status) {
-            case '术前': return '#e6f0ff'; // 浅蓝
-            case '术后': return '#e0f0e0'; // 浅绿
-            case 'CICU':
-            case 'CCU':
-            case 'NICU': return '#ffe6e6'; // 浅红
-            case '出院': return '#ffffff'; // 白
-            default: return '#ffffff';
-        }
-    }
-
-    // 根据状态获取行文字颜色
-    getStatusTextColor(status) {
-        switch (status) {
-            case '术前': return '#003366'; // 藏蓝
-            case '术后': return '#006400'; // 墨绿
-            case 'CICU':
-            case 'CCU':
-            case 'NICU': return '#8B0000'; // 暗红
-            case '出院': return '#000000'; // 黑
-            default: return '#000000';
+            case '术前': return { bg: '#e6f0ff', text: '#003366' };
+            case '术后': return { bg: '#e0f0e0', text: '#006400' };
+            case 'CICU': case 'CCU': case 'NICU': return { bg: '#ffe6e6', text: '#8B0000' };
+            case '出院': default: return { bg: '#ffffff', text: '#000000' };
         }
     }
 
@@ -780,54 +625,55 @@ class HospitalApp {
         sorted.forEach(p => {
             const tr = document.createElement('tr');
             tr.className = 'patient-row';
-            // 设置行背景色和文字颜色
-            const bgColor = this.getStatusBackgroundColor(p.status);
-            const textColor = this.getStatusTextColor(p.status);
-            tr.style.backgroundColor = bgColor;
-            tr.style.color = textColor;
+            const style = this.getStatusStyle(p.status);
+            tr.style.backgroundColor = style.bg;  // 行背景
 
-            // 构建各列
+            // 构建每个单元格，并为非待办列设置文字颜色
             let html = '';
-            // 姓名、性别、年龄、病案号、床号、主要诊断、主管医师、状态（直接显示文字）
-            html += `<td>${p.name}</td>`;
-            html += `<td>${p.gender || ''}</td>`;
-            html += `<td>${p.age || ''}</td>`;
-            html += `<td>${p.caseNumber}</td>`;
-            html += `<td>${p.bed || ''}</td>`;
-            html += `<td>${p.diagnosis || ''}</td>`;
-            html += `<td>${p.doctor || ''}</td>`;
-            html += `<td>${p.status}</td>`;  // 状态单元格无额外span，继承行颜色
-            
-            // 住院日期、住院天数、手术日期、手术名称、术后天数
-            html += `<td>${p.admissionDate || ''}</td>`;
-            html += `<td>${this.calculateDays(p.admissionDate)}</td>`;
-            html += `<td>${p.surgeryDate || ''}</td>`;
-            html += `<td>${p.surgeryName || ''}</td>`;
-            html += `<td>${this.calculateDays(p.surgeryDate)}</td>`;
-            
-            // 备注列（添加类用于点击）
-            html += `<td class="remark-cell" data-patient-id="${p.id}">${this.escapeHtml(p.remark || '')}</td>`;
-            
-            // 待办标签列（强制白底黑字，但标签颜色由内联控制）
+            // 姓名
+            html += `<td style="color: ${style.text};">${p.name}</td>`;
+            // 性别
+            html += `<td style="color: ${style.text};">${p.gender || ''}</td>`;
+            // 年龄
+            html += `<td style="color: ${style.text};">${p.age || ''}</td>`;
+            // 病案号
+            html += `<td style="color: ${style.text};">${p.caseNumber}</td>`;
+            // 床号
+            html += `<td style="color: ${style.text};">${p.bed || ''}</td>`;
+            // 主要诊断
+            html += `<td style="color: ${style.text};">${p.diagnosis || ''}</td>`;
+            // 主管医师
+            html += `<td style="color: ${style.text};">${p.doctor || ''}</td>`;
+            // 状态
+            html += `<td style="color: ${style.text};">${p.status}</td>`;
+            // 住院日期
+            html += `<td style="color: ${style.text};">${p.admissionDate || ''}</td>`;
+            // 住院天数
+            html += `<td style="color: ${style.text};">${this.calculateDays(p.admissionDate)}</td>`;
+            // 手术日期
+            html += `<td style="color: ${style.text};">${p.surgeryDate || ''}</td>`;
+            // 手术名称
+            html += `<td style="color: ${style.text};">${p.surgeryName || ''}</td>`;
+            // 术后天数
+            html += `<td style="color: ${style.text};">${this.calculateDays(p.surgeryDate)}</td>`;
+            // 备注（保持文字颜色，可点击）
+            html += `<td class="remark-cell" data-patient-id="${p.id}" style="color: ${style.text};">${this.escapeHtml(p.remark || '')}</td>`;
+            // 待办标签列（强制白底黑字，由CSS控制，不受行内联影响）
             const todosHtml = p.todos.map(t => {
-                const bgColor = this.tags[t] || '#6c757d';
-                const textColor = this.getContrastColor(bgColor);
-                return `<span class="todo-tag" style="background-color:${bgColor}; color:${textColor};" data-tag="${t}" data-patient="${p.id}">${t}</span>`;
+                const bg = this.tags[t] || '#6c757d';
+                const col = this.getContrastColor(bg);
+                return `<span class="todo-tag" style="background-color:${bg}; color:${col};" data-tag="${t}" data-patient="${p.id}">${t}</span>`;
             }).join(' ');
             html += `<td class="todo-cell" data-patient-id="${p.id}">${todosHtml}</td>`;
-            
+
             tr.innerHTML = html;
 
             // 行单击高亮
-            tr.addEventListener('click', (e) => {
-                this.highlightRow(tr);
-            });
+            tr.addEventListener('click', () => this.highlightRow(tr));
 
             // 行双击打开更新状态（排除待办单元格）
             tr.addEventListener('dblclick', (e) => {
-                if (e.target.closest('.todo-cell')) {
-                    return;
-                }
+                if (e.target.closest('.todo-cell')) return;
                 this.openUpdateStatusForPatient(p.id);
             });
 
@@ -843,9 +689,7 @@ class HospitalApp {
             const todoCell = tr.querySelector('.todo-cell');
             todoCell.addEventListener('dblclick', (e) => {
                 e.stopPropagation();
-                if (e.target.classList.contains('todo-tag')) {
-                    return;
-                }
+                if (e.target.classList.contains('todo-tag')) return;
                 this.openAddTodoForPatient(p.id);
             });
 
@@ -865,31 +709,29 @@ class HospitalApp {
         tbody.innerHTML = '';
         this.discharged.forEach(p => {
             const tr = document.createElement('tr');
-            const bgColor = this.getStatusBackgroundColor(p.status);
-            const textColor = this.getStatusTextColor(p.status);
-            tr.style.backgroundColor = bgColor;
-            tr.style.color = textColor;
+            const style = this.getStatusStyle(p.status);
+            tr.style.backgroundColor = style.bg;
 
             let html = '';
-            html += `<td>${p.name}</td>`;
-            html += `<td>${p.gender || ''}</td>`;
-            html += `<td>${p.age || ''}</td>`;
-            html += `<td>${p.caseNumber}</td>`;
-            html += `<td>${p.bed || ''}</td>`;
-            html += `<td>${p.diagnosis || ''}</td>`;
-            html += `<td>${p.doctor || ''}</td>`;
-            html += `<td>${p.status}</td>`;
-            html += `<td>${p.admissionDate || ''}</td>`;
-            html += `<td>${this.calculateDays(p.admissionDate)}</td>`;
-            html += `<td>${p.surgeryDate || ''}</td>`;
-            html += `<td>${p.surgeryName || ''}</td>`;
-            html += `<td>${this.calculateDays(p.surgeryDate)}</td>`;
-            html += `<td class="remark-cell" data-patient-id="${p.id}">${this.escapeHtml(p.remark || '')}</td>`;
+            html += `<td style="color: ${style.text};">${p.name}</td>`;
+            html += `<td style="color: ${style.text};">${p.gender || ''}</td>`;
+            html += `<td style="color: ${style.text};">${p.age || ''}</td>`;
+            html += `<td style="color: ${style.text};">${p.caseNumber}</td>`;
+            html += `<td style="color: ${style.text};">${p.bed || ''}</td>`;
+            html += `<td style="color: ${style.text};">${p.diagnosis || ''}</td>`;
+            html += `<td style="color: ${style.text};">${p.doctor || ''}</td>`;
+            html += `<td style="color: ${style.text};">${p.status}</td>`;
+            html += `<td style="color: ${style.text};">${p.admissionDate || ''}</td>`;
+            html += `<td style="color: ${style.text};">${this.calculateDays(p.admissionDate)}</td>`;
+            html += `<td style="color: ${style.text};">${p.surgeryDate || ''}</td>`;
+            html += `<td style="color: ${style.text};">${p.surgeryName || ''}</td>`;
+            html += `<td style="color: ${style.text};">${this.calculateDays(p.surgeryDate)}</td>`;
+            html += `<td class="remark-cell" data-patient-id="${p.id}" style="color: ${style.text};">${this.escapeHtml(p.remark || '')}</td>`;
 
             const todosHtml = p.todos.map(t => {
-                const bgColor = this.tags[t] || '#6c757d';
-                const textColor = this.getContrastColor(bgColor);
-                return `<span class="todo-tag" style="background-color:${bgColor}; color:${textColor};" data-tag="${t}" data-patient="${p.id}">${t}</span>`;
+                const bg = this.tags[t] || '#6c757d';
+                const col = this.getContrastColor(bg);
+                return `<span class="todo-tag" style="background-color:${bg}; color:${col};" data-tag="${t}" data-patient="${p.id}">${t}</span>`;
             }).join(' ');
             html += `<td class="todo-cell" data-patient-id="${p.id}">${todosHtml}</td>`;
 
