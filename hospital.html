@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>住院患者管理系统 v1.4.3</title>
+    <title>住院患者管理系统 v2.0</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta name="theme-color" content="#0d6efd">
     
@@ -90,7 +90,6 @@
         .todo-tag { transition: transform 0.1s, box-shadow 0.1s; border: none; }
         .todo-tag:active { transform: scale(0.96); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
         .modal-content { overflow: hidden; }
-        #dischargedList .todo-tag, #icuList .todo-tag { padding: 8px 14px !important; margin: 3px !important; border-radius: 24px !important; }
         select.form-select option { padding: 12px; font-size: 16px; }
         #importBtn, #exportBtn, #csvImportBtn { min-width: 60px; }
     </style>
@@ -125,9 +124,9 @@
         }
     </style>
 
-    <!-- 换行控制 + 强制颜色样式 -->
+    <!-- 列宽与换行控制样式 -->
     <style>
-        /* 表头强制不换行 */
+        /* 表头默认强制不换行 */
         #patientTable th, #dischargedTable th, #icuTable th { white-space: nowrap; }
 
         /* 默认所有单元格强制不换行（配合横向滚动） */
@@ -155,13 +154,41 @@
         /* 备注单元格点击样式 */
         .remark-cell { cursor: pointer; }
         .remark-cell:hover { background-color: #f8f3d6 !important; }
+
+        /* 年龄、住院天数、术后天数 列宽缩窄，标题允许换行 */
+        #patientTable th:nth-child(3),   /* 年龄 */
+        #patientTable th:nth-child(10),  /* 住院天数 */
+        #patientTable th:nth-child(13),  /* 术后天数 */
+        #dischargedTable th:nth-child(3),
+        #dischargedTable th:nth-child(10),
+        #dischargedTable th:nth-child(13),
+        #icuTable th:nth-child(3),
+        #icuTable th:nth-child(10),
+        #icuTable th:nth-child(13) {
+            white-space: normal;
+            width: 6%;
+            min-width: 70px;
+        }
+
+        /* 这些列的单元格内容也适当缩窄，但保持nowrap（内容较短，一般不会换行） */
+        #patientTable td:nth-child(3),
+        #patientTable td:nth-child(10),
+        #patientTable td:nth-child(13),
+        #dischargedTable td:nth-child(3),
+        #dischargedTable td:nth-child(10),
+        #dischargedTable td:nth-child(13),
+        #icuTable td:nth-child(3),
+        #icuTable td:nth-child(10),
+        #icuTable td:nth-child(13) {
+            white-space: nowrap;
+        }
     </style>
 </head>
 
 <body class="bg-light">
 
 <div class="container-fluid py-2">
-    <h5 class="text-center mb-2">住院患者管理系统 v1.4.3</h5>
+    <h5 class="text-center mb-2">住院患者管理系统 v2.0</h5>
     
     <!-- 操作栏 -->
     <div class="row mb-2 g-2 operation-bar">
@@ -491,7 +518,7 @@ class HospitalApp {
         this.tags = {
             "新入": "#FFA500",
             "出院病历": "#007BFF",
-            "手术记录": "#6c757d"   // 默认添加手术记录标签
+            "手术记录": "#6c757d"
         };
         this.sortConfig = { key: null, asc: true };
         this.currentEditRemarkPatientId = null;
@@ -566,7 +593,6 @@ class HospitalApp {
         if (patient.status === '出院') {
             this.discharged.push(patient);
         } else if (['CICU', 'CCU', 'NICU'].includes(patient.status)) {
-            // 确保有手术记录标签
             if (!patient.todos.includes('手术记录')) {
                 patient.todos.push('手术记录');
             }
@@ -593,7 +619,7 @@ class HospitalApp {
             admissionDate: data.admissionDate,
             surgeryDate: data.surgeryDate,
             surgeryName: data.surgeryName,
-            status: "术前",  // 新入默认为术前
+            status: "术前",
             remark: data.remark || '',
             todos: ["新入"]
         };
@@ -608,7 +634,6 @@ class HospitalApp {
     populateBedSelect(selectId) {
         const select = document.getElementById(selectId);
         select.innerHTML = '';
-        // 01床~60床
         for (let i = 1; i <= 60; i++) {
             const num = i.toString().padStart(2, '0');
             const option = document.createElement('option');
@@ -616,18 +641,16 @@ class HospitalApp {
             option.textContent = `${num}床`;
             select.appendChild(option);
         }
-        // Z1床~Z10床
         for (let i = 1; i <= 10; i++) {
             const option = document.createElement('option');
             option.value = `Z${i}床`;
             option.textContent = `Z${i}床`;
             select.appendChild(option);
         }
-        // 加01床~加20床（原+号改为“加”）
         for (let i = 1; i <= 20; i++) {
             const num = i.toString().padStart(2, '0');
             const option = document.createElement('option');
-            option.value = `加${num}床`;     // 值也改为加x床，保持统一
+            option.value = `加${num}床`;
             option.textContent = `加${num}床`;
             select.appendChild(option);
         }
@@ -680,7 +703,6 @@ class HospitalApp {
         }
     }
 
-    // 渲染在院患者（术前/术后）
     renderPatients() {
         const tbody = document.getElementById('patientList');
         tbody.innerHTML = '';
@@ -690,7 +712,7 @@ class HospitalApp {
             const tr = document.createElement('tr');
             tr.className = 'patient-row';
             const style = this.getStatusStyle(p.status);
-            tr.style.backgroundColor = style.bg;  // 行背景
+            tr.style.backgroundColor = style.bg;
 
             let html = '';
             html += `<td style="color: ${style.text};">${p.name}</td>`;
@@ -747,11 +769,9 @@ class HospitalApp {
         });
     }
 
-    // 渲染监护室患者
     renderIcuPatients() {
         const tbody = document.getElementById('icuList');
         tbody.innerHTML = '';
-        // 监护室患者过滤：可以应用全局过滤，但这里简单显示所有
         this.icuPatients.forEach(p => {
             const tr = document.createElement('tr');
             tr.className = 'patient-row';
@@ -813,7 +833,6 @@ class HospitalApp {
         });
     }
 
-    // 渲染出院患者
     renderDischarged() {
         const tbody = document.getElementById('dischargedList');
         tbody.innerHTML = '';
@@ -849,7 +868,7 @@ class HospitalApp {
 
             tr.addEventListener('dblclick', (e) => {
                 if (e.target.closest('.todo-cell')) return;
-                this.openUpdateStatusForPatient(p.id); // 会提示已出院，可考虑不打开
+                this.openUpdateStatusForPatient(p.id);
             });
 
             tr.querySelectorAll('.todo-tag').forEach(tagEl => {
@@ -880,13 +899,11 @@ class HospitalApp {
     openUpdateStatusForPatient(patientId) {
         const patient = this.findPatientById(patientId);
         if (!patient) return;
-        // 如果患者已出院，不允许更新状态
         if (patient.status === '出院') {
             alert('出院患者不能更新状态');
             return;
         }
-        // 填充下拉选项，需要根据患者所在列表，但下拉选项只包含patients和icuPatients
-        this.renderUpdateSelect(); // 重新生成选项（包含在院和监护室）
+        this.renderUpdateSelect();
         const select = document.getElementById('updateSelect');
         select.value = patientId;
         select.dispatchEvent(new Event('change'));
@@ -896,7 +913,7 @@ class HospitalApp {
 
     // 打开添加待办弹窗，并勾选指定患者
     openAddTodoForPatient(patientId) {
-        this.renderTodoPatientList(); // 只包含在院患者？按原逻辑只在院患者可添加待办，也可以让监护室患者可添加，这里保持原样（只在院）
+        this.renderTodoPatientList();
         const checkbox = document.getElementById(`todoPatient${patientId}`);
         if (checkbox) {
             checkbox.checked = true;
@@ -910,7 +927,6 @@ class HospitalApp {
         tbody.innerHTML = '';
         const tagMap = {};
 
-        // 合并所有患者
         const allPatients = [...this.patients, ...this.icuPatients, ...this.discharged];
         allPatients.forEach(p => {
             p.todos.forEach(tag => {
@@ -949,7 +965,6 @@ class HospitalApp {
     renderUpdateSelect() {
         const select = document.getElementById('updateSelect');
         select.innerHTML = '<option value="">请选择患者</option>';
-        // 合并在院和监护室患者（非出院）
         [...this.patients, ...this.icuPatients].forEach(p => {
             const opt = document.createElement('option');
             opt.value = p.id;
@@ -961,7 +976,6 @@ class HospitalApp {
     renderTodoPatientList() {
         const container = document.getElementById('todoPatientList');
         container.innerHTML = '';
-        // 添加待办只能针对在院患者？原代码只对patients，这里我们允许在院和监护室
         [...this.patients, ...this.icuPatients].forEach(p => {
             const div = document.createElement('div');
             div.className = 'form-check';
@@ -1100,7 +1114,6 @@ class HospitalApp {
             if (e.target.tagName === 'BUTTON') {
                 const tag = e.target.dataset.tag;
                 delete this.tags[tag];
-                // 从所有患者中移除该标签
                 [...this.patients, ...this.icuPatients, ...this.discharged].forEach(p => {
                     p.todos = p.todos.filter(t => t !== tag);
                 });
@@ -1135,24 +1148,16 @@ class HospitalApp {
             const form = document.getElementById('updatePatientForm');
             const data = Object.fromEntries(new FormData(form).entries());
 
-            // 检查病案号唯一性（排除自身）
             const existing = this.findPatientByCase(data.caseNumber);
             if (existing && existing.id != pid) {
                 alert('病案号已存在，请检查！');
                 return;
             }
 
-            // 保存旧状态
-            const oldStatus = oldPatient.status;
-            const newStatus = data.status;
-
-            // 更新患者信息（先移除再重新添加，利用addPatientToCorrectList自动处理列表转移）
             const updatedPatient = { ...oldPatient, ...data };
-            updatedPatient.id = oldPatient.id; // 保持id不变
+            updatedPatient.id = oldPatient.id;
 
-            // 从所有列表中移除旧记录
             this.removePatientFromAllLists(pid);
-            // 根据新状态添加到正确列表
             this.addPatientToCorrectList(updatedPatient);
 
             this.saveData();
@@ -1184,12 +1189,10 @@ class HospitalApp {
             if (!pid) return;
             const patient = this.findPatientById(pid);
             if (!patient) return;
-            // 修改状态为出院，并添加出院病历标签
             patient.status = '出院';
             if (!patient.todos.includes('出院病历')) {
                 patient.todos.push('出院病历');
             }
-            // 从原列表移除，添加到出院列表
             this.removePatientFromAllLists(pid);
             this.discharged.push(patient);
             this.saveData();
@@ -1305,7 +1308,6 @@ class HospitalApp {
     updateDischargeOptions() {
         const select = document.getElementById('dischargeSelect');
         select.innerHTML = '<option value="">请选择患者</option>';
-        // 出院弹窗应包含所有非出院患者（在院和监护室）
         [...this.patients, ...this.icuPatients].forEach(p => {
             const opt = document.createElement('option');
             opt.value = p.id;
@@ -1377,7 +1379,6 @@ class HospitalApp {
                 continue;
             }
 
-            // 根据状态添加到正确列表
             this.addPatientToCorrectList(patient);
             addedCount++;
         }
