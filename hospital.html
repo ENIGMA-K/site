@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>住院患者管理系统 v1.4</title>
+    <title>住院患者管理系统 v1.4.1</title>
     <!-- 优化视口设置，确保在移动设备上能正确缩放 -->
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta name="theme-color" content="#0d6efd">
@@ -20,12 +20,6 @@
         .todo-tag { padding: 2px 5px; border-radius: 3px; font-size: 0.85em; cursor: pointer; }
         .modal-body label { font-weight: bold; }
         .todo-item:hover { background-color: #f8f9fa; cursor: pointer; }
-
-        /* 状态颜色 - 新要求：文字颜色保持不变（已在getStatusClass中定义），但背景由行内联样式控制 */
-        .status-preop { color: #003366; }       /* 术前 藏蓝色 */
-        .status-postop { color: #006400; }      /* 术后 墨绿色 */
-        .status-icu { color: #8B0000; }         /* 监护室 暗红色 */
-        .status-discharged { color: #000000; }  /* 出院 黑色 */
 
         /* 移动端优化 */
         @media (max-width: 768px) {
@@ -238,18 +232,21 @@
         }
     </style>
 
-    <!-- 换行控制样式 -->
+    <!-- 换行控制 + 整行颜色样式 -->
     <style>
+        /* 表头强制不换行 */
         #patientTable th,
         #dischargedTable th {
             white-space: nowrap;
         }
 
+        /* 默认所有单元格强制不换行（配合横向滚动） */
         #patientTable td,
         #dischargedTable td {
             white-space: nowrap;
         }
 
+        /* 备注列（第14列）允许换行 */
         #patientTable td:nth-child(14),
         #dischargedTable td:nth-child(14) {
             white-space: pre-wrap;
@@ -258,38 +255,44 @@
             min-width: 120px;
         }
 
+        /* 待办标签列（第15列）允许换行，但标签内部不换行，且强制白底+黑色默认文字 */
         #patientTable td:nth-child(15),
         #dischargedTable td:nth-child(15) {
             white-space: normal;
             word-break: normal;
-            background-color: #ffffff !important; /* 待办列强制白底，不受行背景影响 */
+            background-color: #ffffff !important;
+            color: #000000 !important;  /* 待办列文字黑色，不受行颜色影响 */
         }
 
+        /* 待办标签内部强制不换行，颜色由内联样式控制 */
         .todo-tag {
             white-space: nowrap !important;
             display: inline-block;
             max-width: none;
         }
 
+        /* 出院表格同样适用 */
         #dischargedTable td:nth-child(14) {
             white-space: pre-wrap;
         }
         #dischargedTable td:nth-child(15) {
             white-space: normal;
             background-color: #ffffff !important;
+            color: #000000 !important;
         }
 
+        /* 备注单元格点击样式提示 */
         .remark-cell {
             cursor: pointer;
-            background-color: #fef9e7;
+            background-color: inherit; /* 继承行背景，但通过内联样式覆盖 */
         }
         .remark-cell:hover {
-            background-color: #f8f3d6;
+            background-color: #f8f3d6 !important;  /* 悬停时改变，但优先级低于行内联？使用important确保 */
         }
 
-        /* 双击提示（整行已可双击，但保留视觉反馈） */
-        .patient-row {
-            cursor: default;
+        /* 行内备注单元格悬停效果覆盖行背景 */
+        tr:hover .remark-cell {
+            background-color: #f8f3d6 !important;
         }
     </style>
 </head>
@@ -297,7 +300,7 @@
 <body class="bg-light">
 
 <div class="container-fluid py-2">
-    <h5 class="text-center mb-2">住院患者管理系统 v1.4</h5>
+    <h5 class="text-center mb-2">住院患者管理系统 v1.4.1</h5>
     
     <!-- 操作栏 -->
     <div class="row mb-2 g-2 operation-bar">
@@ -605,31 +608,18 @@ class HospitalApp {
 
         // 定义CSV列名映射（支持中英文）
         this.csvFieldMap = {
-            '姓名': 'name',
-            'name': 'name',
-            '性别': 'gender',
-            'gender': 'gender',
-            '年龄': 'age',
-            'age': 'age',
-            '病案号': 'caseNumber',
-            'caseNumber': 'caseNumber',
-            '床号': 'bed',
-            'bed': 'bed',
-            '主要诊断': 'diagnosis',
-            'diagnosis': 'diagnosis',
-            '主管医师': 'doctor',
-            'doctor': 'doctor',
-            '住院日期': 'admissionDate',
-            'admissionDate': 'admissionDate',
-            '手术日期': 'surgeryDate',
-            'surgeryDate': 'surgeryDate',
-            '手术名称': 'surgeryName',
-            'surgeryName': 'surgeryName',
-            '备注': 'remark',
-            'remark': 'remark',
-            '状态': 'status',
-            'status': 'status'
-            // 待办标签暂时忽略，默认添加“新入”
+            '姓名': 'name', 'name': 'name',
+            '性别': 'gender', 'gender': 'gender',
+            '年龄': 'age', 'age': 'age',
+            '病案号': 'caseNumber', 'caseNumber': 'caseNumber',
+            '床号': 'bed', 'bed': 'bed',
+            '主要诊断': 'diagnosis', 'diagnosis': 'diagnosis',
+            '主管医师': 'doctor', 'doctor': 'doctor',
+            '住院日期': 'admissionDate', 'admissionDate': 'admissionDate',
+            '手术日期': 'surgeryDate', 'surgeryDate': 'surgeryDate',
+            '手术名称': 'surgeryName', 'surgeryName': 'surgeryName',
+            '备注': 'remark', 'remark': 'remark',
+            '状态': 'status', 'status': 'status'
         };
 
         this.loadData();
@@ -732,9 +722,21 @@ class HospitalApp {
         }
     }
 
+    // 根据状态获取行文字颜色
+    getStatusTextColor(status) {
+        switch (status) {
+            case '术前': return '#003366'; // 藏蓝
+            case '术后': return '#006400'; // 墨绿
+            case 'CICU':
+            case 'CCU':
+            case 'NICU': return '#8B0000'; // 暗红
+            case '出院': return '#000000'; // 黑
+            default: return '#000000';
+        }
+    }
+
     // 计算亮度并返回适合的文字颜色（黑色或白色）
     getContrastColor(hexColor) {
-        // 将十六进制颜色转换为RGB
         let r, g, b;
         if (hexColor.startsWith('#')) {
             const hex = hexColor.substring(1);
@@ -747,12 +749,11 @@ class HospitalApp {
                 g = parseInt(hex.substring(2, 4), 16);
                 b = parseInt(hex.substring(4, 6), 16);
             } else {
-                return '#000000'; // 默认黑色
+                return '#000000';
             }
         } else {
             return '#000000';
         }
-        // 计算亮度 (YIQ公式)
         const brightness = (r * 299 + g * 587 + b * 114) / 1000;
         return brightness > 128 ? '#000000' : '#ffffff';
     }
@@ -779,20 +780,23 @@ class HospitalApp {
         sorted.forEach(p => {
             const tr = document.createElement('tr');
             tr.className = 'patient-row';
-            // 设置行背景色
-            tr.style.backgroundColor = this.getStatusBackgroundColor(p.status);
+            // 设置行背景色和文字颜色
+            const bgColor = this.getStatusBackgroundColor(p.status);
+            const textColor = this.getStatusTextColor(p.status);
+            tr.style.backgroundColor = bgColor;
+            tr.style.color = textColor;
 
-            // 构建各列（索引0-7为状态之前的字段，使用innerHTML直接）
-            const fields = [
-                p.name, p.gender || '', p.age || '', p.caseNumber, p.bed || '',
-                p.diagnosis || '', p.doctor || '', 
-                `<span class="${this.getStatusClass(p.status)}">${p.status}</span>`
-            ];
-            
+            // 构建各列
             let html = '';
-            fields.forEach(content => {
-                html += `<td>${content}</td>`;
-            });
+            // 姓名、性别、年龄、病案号、床号、主要诊断、主管医师、状态（直接显示文字）
+            html += `<td>${p.name}</td>`;
+            html += `<td>${p.gender || ''}</td>`;
+            html += `<td>${p.age || ''}</td>`;
+            html += `<td>${p.caseNumber}</td>`;
+            html += `<td>${p.bed || ''}</td>`;
+            html += `<td>${p.diagnosis || ''}</td>`;
+            html += `<td>${p.doctor || ''}</td>`;
+            html += `<td>${p.status}</td>`;  // 状态单元格无额外span，继承行颜色
             
             // 住院日期、住院天数、手术日期、手术名称、术后天数
             html += `<td>${p.admissionDate || ''}</td>`;
@@ -801,10 +805,10 @@ class HospitalApp {
             html += `<td>${p.surgeryName || ''}</td>`;
             html += `<td>${this.calculateDays(p.surgeryDate)}</td>`;
             
-            // 备注列
+            // 备注列（添加类用于点击）
             html += `<td class="remark-cell" data-patient-id="${p.id}">${this.escapeHtml(p.remark || '')}</td>`;
             
-            // 待办标签列
+            // 待办标签列（强制白底黑字，但标签颜色由内联控制）
             const todosHtml = p.todos.map(t => {
                 const bgColor = this.tags[t] || '#6c757d';
                 const textColor = this.getContrastColor(bgColor);
@@ -821,7 +825,6 @@ class HospitalApp {
 
             // 行双击打开更新状态（排除待办单元格）
             tr.addEventListener('dblclick', (e) => {
-                // 如果双击事件发生在待办单元格内或其子元素上，则不处理
                 if (e.target.closest('.todo-cell')) {
                     return;
                 }
@@ -840,7 +843,6 @@ class HospitalApp {
             const todoCell = tr.querySelector('.todo-cell');
             todoCell.addEventListener('dblclick', (e) => {
                 e.stopPropagation();
-                // 如果双击的是标签本身，不处理（由单击完成）
                 if (e.target.classList.contains('todo-tag')) {
                     return;
                 }
@@ -863,39 +865,40 @@ class HospitalApp {
         tbody.innerHTML = '';
         this.discharged.forEach(p => {
             const tr = document.createElement('tr');
-            tr.style.backgroundColor = this.getStatusBackgroundColor(p.status);
+            const bgColor = this.getStatusBackgroundColor(p.status);
+            const textColor = this.getStatusTextColor(p.status);
+            tr.style.backgroundColor = bgColor;
+            tr.style.color = textColor;
 
-            const fields = [
-                p.name, p.gender || '', p.age || '', p.caseNumber, p.bed || '',
-                p.diagnosis || '', p.doctor || '',
-                `<span class="${this.getStatusClass(p.status)}">${p.status}</span>`
-            ];
-            
             let html = '';
-            fields.forEach(content => {
-                html += `<td>${content}</td>`;
-            });
-            
+            html += `<td>${p.name}</td>`;
+            html += `<td>${p.gender || ''}</td>`;
+            html += `<td>${p.age || ''}</td>`;
+            html += `<td>${p.caseNumber}</td>`;
+            html += `<td>${p.bed || ''}</td>`;
+            html += `<td>${p.diagnosis || ''}</td>`;
+            html += `<td>${p.doctor || ''}</td>`;
+            html += `<td>${p.status}</td>`;
             html += `<td>${p.admissionDate || ''}</td>`;
             html += `<td>${this.calculateDays(p.admissionDate)}</td>`;
             html += `<td>${p.surgeryDate || ''}</td>`;
             html += `<td>${p.surgeryName || ''}</td>`;
             html += `<td>${this.calculateDays(p.surgeryDate)}</td>`;
             html += `<td class="remark-cell" data-patient-id="${p.id}">${this.escapeHtml(p.remark || '')}</td>`;
-            
+
             const todosHtml = p.todos.map(t => {
                 const bgColor = this.tags[t] || '#6c757d';
                 const textColor = this.getContrastColor(bgColor);
                 return `<span class="todo-tag" style="background-color:${bgColor}; color:${textColor};" data-tag="${t}" data-patient="${p.id}">${t}</span>`;
             }).join(' ');
             html += `<td class="todo-cell" data-patient-id="${p.id}">${todosHtml}</td>`;
-            
+
             tr.innerHTML = html;
 
-            // 双击行更新状态（仅当点击不在待办单元格）
+            // 双击行更新状态（但出院患者不可更新，所以只对在院有效，此处调用方法会提示）
             tr.addEventListener('dblclick', (e) => {
                 if (e.target.closest('.todo-cell')) return;
-                this.openUpdateStatusForPatient(p.id); // 注意出院患者不应更新状态，但为了统一，我们仍调用，但方法内会判断
+                this.openUpdateStatusForPatient(p.id); // 会提示已出院
             });
 
             tr.querySelectorAll('.todo-tag').forEach(tagEl => {
@@ -909,7 +912,7 @@ class HospitalApp {
             todoCell.addEventListener('dblclick', (e) => {
                 e.stopPropagation();
                 if (e.target.classList.contains('todo-tag')) return;
-                this.openAddTodoForPatient(p.id); // 出院患者也能添加待办？可以，但待办会留在出院患者记录中
+                this.openAddTodoForPatient(p.id);
             });
 
             const remarkTd = tr.querySelector('.remark-cell');
@@ -1260,18 +1263,6 @@ class HospitalApp {
         return diff >= 0 ? diff : '';
     }
 
-    getStatusClass(status) {
-        const map = {
-            '术前': 'status-preop',
-            '术后': 'status-postop',
-            'CICU': 'status-icu',
-            'CCU': 'status-icu',
-            'NICU': 'status-icu',
-            '出院': 'status-discharged'
-        };
-        return map[status] || '';
-    }
-
     applyFilters(patients) {
         const name = document.getElementById('filterName').value.trim().toLowerCase();
         const bed = document.getElementById('filterBed').value.trim().toLowerCase();
@@ -1359,12 +1350,11 @@ class HospitalApp {
             return;
         }
 
-        // 解析标题行，去除可能的引号和空白
+        // 解析标题行
         const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-        const fieldIndices = {}; // 存储每个字段对应的列索引
+        const fieldIndices = {};
         headers.forEach((header, index) => {
             const lowerHeader = header.toLowerCase();
-            // 使用映射查找对应的patient字段
             for (let key in this.csvFieldMap) {
                 if (key.toLowerCase() === lowerHeader) {
                     fieldIndices[this.csvFieldMap[key]] = index;
@@ -1373,9 +1363,8 @@ class HospitalApp {
             }
         });
 
-        // 检查必要字段是否存在
         if (fieldIndices['name'] === undefined || fieldIndices['caseNumber'] === undefined) {
-            alert('CSV必须包含姓名和病案号列（列名可以是“姓名”或“name”及“病案号”或“caseNumber”）');
+            alert('CSV必须包含姓名和病案号列（列名可以是“姓名”/“name”及“病案号”/“caseNumber”）');
             return;
         }
 
@@ -1387,10 +1376,8 @@ class HospitalApp {
             const line = lines[i].trim();
             if (!line) continue;
 
-            // 解析行，处理引号内的逗号（简单处理，未完全支持CSV标准，但满足基本需求）
             const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
             
-            // 构建患者对象
             const patient = {
                 id: Date.now() + i,
                 name: values[fieldIndices['name']] || '',
@@ -1405,17 +1392,15 @@ class HospitalApp {
                 surgeryName: fieldIndices['surgeryName'] !== undefined ? values[fieldIndices['surgeryName']] || '' : '',
                 remark: fieldIndices['remark'] !== undefined ? values[fieldIndices['remark']] || '' : '',
                 status: fieldIndices['status'] !== undefined ? values[fieldIndices['status']] || '术前' : '术前',
-                todos: ["新入"] // 默认添加新入标签
+                todos: ["新入"]
             };
 
-            // 检查必填字段
             if (!patient.name || !patient.caseNumber) {
                 console.warn(`第 ${i+1} 行缺少姓名或病案号，已跳过`);
                 errorCount++;
                 continue;
             }
 
-            // 检查病案号唯一性
             if (this.findPatientByCase(patient.caseNumber)) {
                 console.warn(`第 ${i+1} 行病案号 ${patient.caseNumber} 已存在，已跳过`);
                 errorCount++;
