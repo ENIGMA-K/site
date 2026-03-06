@@ -2,678 +2,216 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>业余无线电·答题训练 (JSON单文件版 · 备用CDN)</title>
-    <!-- 使用 jsDelivr 提供的 PapaParse，以替代可能无法访问的 cloudflare -->
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <title>业余无线电 CSV → JSON 转换器 (内联解析)</title>
     <style>
-        /* 样式与之前完全相同，此处省略以节省篇幅，实际使用时请保留完整样式 */
-        * {
-            box-sizing: border-box;
-            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-            margin: 0;
-            padding: 0;
-        }
         body {
-            background: #f4f7fa;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            padding: 12px;
+            font-family: system-ui, sans-serif;
+            max-width: 1000px;
+            margin: 30px auto;
+            padding: 20px;
+            background: #f5f7fa;
         }
-        .app-container {
-            max-width: 900px;
-            width: 100%;
+        .container {
             background: white;
             border-radius: 28px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.08);
-            overflow: hidden;
-            padding: 20px;
-            margin: 10px 0;
-        }
-        .page {
-            display: block;
-        }
-        .hidden {
-            display: none !important;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
         h2 {
-            font-size: 1.7rem;
-            font-weight: 600;
-            color: #1e2b3c;
-            margin-bottom: 16px;
-            letter-spacing: -0.02em;
+            margin-top: 0;
+            color: #1e3c5f;
         }
-        h3 {
-            font-size: 1.2rem;
-            color: #2c3e50;
-            margin: 16px 0 8px;
-        }
-        .flex-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 16px;
-            align-items: center;
-            justify-content: space-between;
+        textarea {
+            width: 100%;
+            height: 300px;
+            font-family: monospace;
+            padding: 15px;
+            border-radius: 20px;
+            border: 2px dashed #a0b8cc;
+            resize: vertical;
+            margin: 20px 0;
+            font-size: 14px;
         }
         .btn {
-            background: white;
-            border: 1px solid #ccd7e4;
-            padding: 12px 24px;
-            border-radius: 40px;
-            font-size: 1rem;
-            font-weight: 500;
-            color: #1e2b3c;
-            cursor: pointer;
-            transition: all 0.15s;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-        }
-        .btn-primary {
             background: #1e3c5f;
-            border: 1px solid #1e3c5f;
             color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 40px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            margin-right: 15px;
         }
-        .btn-primary:hover {
+        .btn:hover {
             background: #15324d;
         }
-        .btn-outline {
-            background: white;
-            border: 1px solid #1e3c5f;
-            color: #1e3c5f;
-        }
-        .btn:active { transform: scale(0.97); }
-        .btn:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-            pointer-events: none;
-        }
-        .file-zone {
-            background: #f1f4f8;
+        .info {
+            background: #eef3f9;
+            padding: 15px;
             border-radius: 20px;
-            padding: 24px;
-            text-align: center;
-            border: 2px dashed #a0b8cc;
-            margin: 8px 0 16px;
+            margin: 20px 0;
         }
-        .stats-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 16px;
-            margin-top: 20px;
+        .note {
+            color: #2b4f6e;
         }
-        .stat-item {
-            background: white;
-            border-radius: 32px;
-            padding: 20px 18px;
-            flex: 1 1 150px;
-            box-shadow: 0 5px 12px rgba(0,0,0,0.04);
-            border: 1px solid #dee6ef;
-        }
-        .stat-label {
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            color: #5f7d9c;
-            letter-spacing: 0.5px;
-        }
-        .stat-number {
-            font-size: 2.3rem;
-            font-weight: 700;
-            color: #0a2647;
-            line-height: 1.2;
-        }
-        .question-container {
-            background: #ffffff;
-            border-radius: 32px;
-            padding: 24px;
-            border: 1px solid #e2eaf2;
-            margin: 16px 0;
-        }
-        .question-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            flex-wrap: wrap;
-            margin-bottom: 20px;
-            color: #475e77;
-        }
-        .q-meta {
-            background: #eef3f9;
-            padding: 6px 14px;
-            border-radius: 40px;
-            font-size: 0.85rem;
-        }
-        .q-img {
-            max-width: 100%;
-            max-height: 220px;
-            margin: 16px 0;
-            border-radius: 24px;
-            box-shadow: 0 6px 12px rgba(0,0,0,0.05);
-            background: #eef3f9;
-            padding: 8px;
-            object-fit: contain;
-        }
-        .options {
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
-            margin: 24px 0;
-        }
-        .option {
-            background: #f2f6fc;
-            border-radius: 40px;
-            padding: 16px 20px;
-            border: 1.5px solid transparent;
-            transition: 0.1s;
-            font-size: 1.05rem;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-        .option input {
-            transform: scale(1.2);
-            margin-right: 6px;
-            accent-color: #1e3c5f;
-            flex-shrink: 0;
-        }
-        .option label {
-            flex: 1;
-            color: #1e293b;
-        }
-        .correct-highlight {
-            background: #d0f0d0 !important;
-            border-color: #1f9a4f !important;
-        }
-        .wrong-highlight {
-            background: #ffe1de !important;
-            border-color: #c73b2b !important;
-        }
-        .action-buttons {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 16px;
-            justify-content: space-between;
-            margin-top: 28px;
-        }
-        .single-rate {
-            background: #e3eaf2;
-            border-radius: 40px;
-            padding: 6px 18px;
-            font-size: 1rem;
-            font-weight: 500;
-        }
-        .footer-note {
-            color: #7895b2;
-            font-size: 0.85rem;
-            margin-top: 20px;
-            text-align: center;
-        }
-        .status-message {
-            margin-top: 16px;
-            padding: 12px;
-            border-radius: 40px;
-            background: #e6edf6;
-            color: #1e3c5f;
-            font-weight: 500;
-        }
-        .status-error {
-            background: #ffe8e6;
-            color: #b53b2b;
-        }
-        .status-success {
-            background: #dff0d8;
+        #status {
+            margin-top: 15px;
             color: #1f7840;
+            font-weight: 500;
         }
-        @media (max-width: 600px) {
-            .btn { padding: 12px 18px; }
-            .stat-number { font-size: 1.8rem; }
-            .option { padding: 14px; }
+        .error {
+            color: #b53b2b;
         }
     </style>
 </head>
 <body>
-<div class="app-container" id="appContainer">
-
-    <!-- 总览界面 OVERVIEW PAGE -->
-    <div id="overviewPage" class="page">
-        <h2>📊 训练总览 (JSON单文件)</h2>
-        <div class="file-zone">
-            <p style="margin-bottom: 16px; font-weight: 500;">📂 加载题库及训练记录 (JSON文件)</p>
-            <input type="file" id="jsonFileInput" accept=".json, application/json" style="margin-bottom: 20px;">
-            <div id="jsonStatus" class="status-message">等待上传JSON文件...</div>
-        </div>
-
-        <div class="stats-grid" id="statsContainer">
-            <div class="stat-item"><span class="stat-label">总正确率</span><div class="stat-number" id="totalPercent">0%</div></div>
-            <div class="stat-item"><span class="stat-label">A 类</span><div class="stat-number" id="aPercent">0%</div></div>
-            <div class="stat-item"><span class="stat-label">B 类</span><div class="stat-number" id="bPercent">0%</div></div>
-            <div class="stat-item"><span class="stat-label">C 类</span><div class="stat-number" id="cPercent">0%</div></div>
-        </div>
-
-        <div class="flex-row" style="margin: 24px 0 12px;">
-            <span style="font-weight: 600; color: #0b2a41;">⚡ 开始训练</span>
-            <div style="display: flex; gap: 10px;">
-                <button class="btn btn-outline" id="selectA" disabled>A类</button>
-                <button class="btn btn-outline" id="selectB" disabled>B类</button>
-                <button class="btn btn-outline" id="selectC" disabled>C类</button>
-            </div>
-        </div>
-        <p style="color:#2b4f6e;">选择类别后进入答题，题目按权重随机出现。退出时自动下载JSON。</p>
+<div class="container">
+    <h2>📁 业余无线电题库 CSV → JSON 转换器 (纯内联)</h2>
+    <div class="info">
+        <p>1. 将您原有的CSV文件内容（用记事本打开，全选复制）粘贴到下方文本域中。</p>
+        <p>2. 点击“生成JSON并下载”，即可获得包含“正确积分”和“答题次数”字段的新JSON文件。</p>
+        <p>3. 本工具完全在浏览器内运行，不依赖任何外部库。</p>
+        <p>⚠️ 支持带引号的字段和换行符，但要求第一行为列标题。</p>
     </div>
-
-    <!-- 答题界面 QUIZ PAGE -->
-    <div id="quizPage" class="page hidden">
-        <div class="flex-row" style="margin-bottom: 8px;">
-            <h3 style="margin:0;">📝 答题中 · <span id="quizCategory">A类</span></h3>
-            <button class="btn btn-outline" id="exitQuizBtn">🏁 退出训练 & 下载JSON</button>
-        </div>
-        <div class="question-container" id="quizCard">
-            <div class="question-header">
-                <span id="questionText" style="font-weight: 600; font-size: 1.2rem;">加载中...</span>
-                <span class="q-meta" id="questionType">单选</span>
-            </div>
-            <div id="imageContainer"></div>
-            <div class="options" id="optionsContainer"></div>
-            <div class="flex-row" style="margin: 10px 0 6px;">
-                <span class="single-rate" id="singleRate">正确率 0% (0/0)</span>
-                <span style="color:#53718e;" id="weightInfo"></span>
-            </div>
-            <div class="action-buttons">
-                <button class="btn" id="confirmBtn">✅ 确认</button>
-                <button class="btn btn-primary" id="nextBtn">⏩ 下一题</button>
-            </div>
-        </div>
-        <div class="footer-note">* 确认后选项变色，正确积分自动更新</div>
+    <textarea id="csvInput" placeholder="请粘贴CSV内容..."></textarea>
+    <div>
+        <button class="btn" id="convertBtn">生成JSON并下载</button>
+        <span id="status"></span>
     </div>
+    <p class="note">列名要求：<br>
+        题号,题干,正确答案,选项A,选项B,选项C,选项D,是否包含图片,A类,B类,C类,正确积分,答题次数<br>
+        （正确积分和答题次数若不存在，将自动补0）</p>
 </div>
 
 <script>
 (function() {
-    // ---------- 核心数据 ----------
-    let allQuestions = [];                 // 原始题库 (从JSON解析)
-    let questionsMap = new Map();          // 题号 -> 题目对象 (快速更新)
-    let categoryQuestions = { A: [], B: [], C: [] }; // 分类后的题号索引
-    let currentCategory = 'A';              // 当前训练类别
-    let currentQuestion = null;              // 当前显示的题目对象
-    let answerLock = false;                  // 是否已经确认本题 (不可重复确认)
-    let selectedValues = new Set();           // 当前选中的原始key (A/B/C/D)
+    const convertBtn = document.getElementById('convertBtn');
+    const csvInput = document.getElementById('csvInput');
+    const statusSpan = document.getElementById('status');
 
-    // 图片基础路径（用户指定的在线目录）
-    const IMAGE_BASE_URL = 'https://enigma-k.github.io/site/%E5%9B%BE%E7%89%87/';
+    // 简易CSV解析函数（支持引号包裹的字段）
+    function parseCSV(csvText) {
+        const lines = [];
+        let currentLine = [];
+        let currentField = '';
+        let inQuotes = false;
+        let i = 0;
 
-    // 统计相关元素
-    const totalPercentEl = document.getElementById('totalPercent');
-    const aPercentEl = document.getElementById('aPercent');
-    const bPercentEl = document.getElementById('bPercent');
-    const cPercentEl = document.getElementById('cPercent');
+        // 统一换行符为 \n
+        const text = csvText.replace(/\r\n/g, '\n').replace(/\r/g, '\n') + '\n'; // 末尾加换行方便处理
 
-    // 页面元素
-    const overviewPage = document.getElementById('overviewPage');
-    const quizPage = document.getElementById('quizPage');
-    const jsonFileInput = document.getElementById('jsonFileInput');
-    const selectABtn = document.getElementById('selectA');
-    const selectBBtn = document.getElementById('selectB');
-    const selectCBtn = document.getElementById('selectC');
-    const exitQuizBtn = document.getElementById('exitQuizBtn');
-    const quizCategorySpan = document.getElementById('quizCategory');
-    const questionText = document.getElementById('questionText');
-    const imageContainer = document.getElementById('imageContainer');
-    const optionsDiv = document.getElementById('optionsContainer');
-    const singleRateSpan = document.getElementById('singleRate');
-    const confirmBtn = document.getElementById('confirmBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const questionTypeSpan = document.getElementById('questionType');
-    const jsonStatus = document.getElementById('jsonStatus');
+        for (i = 0; i < text.length; i++) {
+            const ch = text[i];
+            const nextCh = text[i+1];
 
-    // 检查 PapaParse 是否加载成功
-    if (typeof Papa === 'undefined') {
-        jsonStatus.innerText = '❌ 错误：PapaParse 库加载失败，请刷新页面或检查网络。';
-        jsonStatus.className = 'status-message status-error';
+            if (ch === '"' && !inQuotes) {
+                // 开始引号
+                inQuotes = true;
+            } else if (ch === '"' && inQuotes) {
+                // 结束引号或双引号转义
+                if (nextCh === '"') {
+                    // 两个引号连续，表示一个转义引号
+                    currentField += '"';
+                    i++; // 跳过下一个引号
+                } else {
+                    // 引号结束
+                    inQuotes = false;
+                }
+            } else if (ch === ',' && !inQuotes) {
+                // 字段结束
+                currentLine.push(currentField);
+                currentField = '';
+            } else if (ch === '\n' && !inQuotes) {
+                // 行结束
+                currentLine.push(currentField);
+                lines.push(currentLine);
+                currentLine = [];
+                currentField = '';
+            } else {
+                // 普通字符
+                currentField += ch;
+            }
+        }
+
+        // 移除可能的空行（最后一行可能由于末尾换行产生空）
+        return lines.filter(line => line.length > 0 && !(line.length === 1 && line[0] === ''));
     }
 
-    // ---------- 辅助函数 ----------
-    function updateStats() {
-        if (allQuestions.length === 0) {
-            totalPercentEl.innerText = '0%';
-            aPercentEl.innerText = '0%';
-            bPercentEl.innerText = '0%';
-            cPercentEl.innerText = '0%';
+    function cleanField(field) {
+        // 去除字段首尾空格，并处理可能的引号包裹
+        field = field.trim();
+        if (field.startsWith('"') && field.endsWith('"')) {
+            field = field.slice(1, -1).replace(/""/g, '"');
+        }
+        return field;
+    }
+
+    convertBtn.addEventListener('click', function() {
+        const csvText = csvInput.value.trim();
+        if (!csvText) {
+            statusSpan.innerText = '❌ 请输入CSV内容';
+            statusSpan.className = 'error';
             return;
         }
-        let totalRight = 0, totalAttempt = 0;
-        let aRight = 0, aAttempt = 0, bRight = 0, bAttempt = 0, cRight = 0, cAttempt = 0;
 
-        allQuestions.forEach(q => {
-            const right = q.正确积分 || 0;
-            const att = q.答题次数 || 0;
-            totalRight += right;
-            totalAttempt += att;
-            if (q.A类 == 1 || q.A类 === '1') { aRight += right; aAttempt += att; }
-            if (q.B类 == 1 || q.B类 === '1') { bRight += right; bAttempt += att; }
-            if (q.C类 == 1 || q.C类 === '1') { cRight += right; cAttempt += att; }
-        });
+        statusSpan.innerText = '⏳ 解析中...';
+        statusSpan.className = '';
 
-        totalPercentEl.innerText = totalAttempt ? Math.round(100 * totalRight / totalAttempt) + '%' : '0%';
-        aPercentEl.innerText = aAttempt ? Math.round(100 * aRight / aAttempt) + '%' : '0%';
-        bPercentEl.innerText = bAttempt ? Math.round(100 * bRight / bAttempt) + '%' : '0%';
-        cPercentEl.innerText = cAttempt ? Math.round(100 * cRight / cAttempt) + '%' : '0%';
-    }
-
-    // 权重计算
-    function getWeight(question) {
-        const att = question.答题次数 || 0;
-        const right = question.正确积分 || 0;
-        return (att - right + 2) / (att + 3);
-    }
-
-    // 根据当前类别随机抽取一题 (权重)
-    function pickQuestionByWeight(category) {
-        const qIndices = categoryQuestions[category] || [];
-        if (qIndices.length === 0) return null;
-        const weights = qIndices.map(idx => getWeight(allQuestions[idx]));
-        const totalWeight = weights.reduce((a, b) => a + b, 0);
-        let rand = Math.random() * totalWeight;
-        let cum = 0;
-        for (let i = 0; i < qIndices.length; i++) {
-            cum += weights[i];
-            if (rand <= cum) {
-                return allQuestions[qIndices[i]];
+        try {
+            const lines = parseCSV(csvText);
+            if (lines.length < 2) {
+                throw new Error('CSV至少需要标题行和一行数据');
             }
-        }
-        return allQuestions[qIndices[0]]; // fallback
-    }
 
-    // 打乱选项并返回选项列表（保留原始key）
-    function shuffleOptions(q) {
-        const opts = [
-            { key: 'A', text: q.选项A },
-            { key: 'B', text: q.选项B },
-            { key: 'C', text: q.选项C },
-            { key: 'D', text: q.选项D }
-        ].filter(opt => opt.text && opt.text.trim() !== '');
-        for (let i = opts.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [opts[i], opts[j]] = [opts[j], opts[i]];
-        }
-        return opts;
-    }
+            const headers = lines[0].map(h => cleanField(h));
+            // 预期列名，但不必严格检查，只按实际列名处理
+            const requiredFields = ['题号']; // 只要求题号存在，其他可选
 
-    // 显示指定题目
-    function renderQuestion(q) {
-        if (!q) return;
-        currentQuestion = q;
-        answerLock = false;
-        selectedValues.clear();
-
-        // 题干
-        questionText.innerText = q.题干 || '无题干';
-        // 图片：直接从在线路径加载
-        imageContainer.innerHTML = '';
-        if (q.是否包含图片 && q.是否包含图片.trim() !== '') {
-            const imgFile = q.是否包含图片.trim();
-            const encodedFileName = encodeURIComponent(imgFile);
-            const imgUrl = IMAGE_BASE_URL + encodedFileName;
-            const img = document.createElement('img');
-            img.src = imgUrl;
-            img.alt = '题图';
-            img.classList.add('q-img');
-            img.onerror = () => {
-                img.style.display = 'none';
-                const errorSpan = document.createElement('span');
-                errorSpan.innerText = `[图片 ${imgFile} 加载失败，请检查路径或文件名]`;
-                errorSpan.style.background = '#fee';
-                errorSpan.style.padding = '12px';
-                errorSpan.style.display = 'block';
-                errorSpan.style.borderRadius = '12px';
-                imageContainer.appendChild(errorSpan);
-            };
-            imageContainer.appendChild(img);
-        }
-
-        const correctStr = (q.正确答案 || '').replace(/\s/g, '');
-        const isMulti = correctStr.length > 1;
-        questionTypeSpan.innerText = isMulti ? '多选题' : '单选题';
-
-        const shuffled = shuffleOptions(q);
-        optionsDiv.innerHTML = '';
-        shuffled.forEach(opt => {
-            const optionDiv = document.createElement('div');
-            optionDiv.className = 'option';
-            const input = document.createElement('input');
-            input.type = isMulti ? 'checkbox' : 'radio';
-            input.name = 'quizOption';
-            input.value = opt.key;
-            input.dataset.key = opt.key;
-            input.addEventListener('change', (e) => {
-                if (answerLock) {
-                    e.preventDefault();
-                    return;
-                }
-                if (isMulti) {
-                    if (input.checked) selectedValues.add(opt.key);
-                    else selectedValues.delete(opt.key);
-                } else {
-                    if (input.checked) {
-                        selectedValues.clear();
-                        selectedValues.add(opt.key);
-                    } else {
-                        selectedValues.delete(opt.key);
-                    }
-                }
-            });
-            const label = document.createElement('label');
-            label.innerText = `${opt.key}: ${opt.text}`;
-            optionDiv.appendChild(input);
-            optionDiv.appendChild(label);
-            optionsDiv.appendChild(optionDiv);
-        });
-
-        const att = q.答题次数 || 0;
-        const right = q.正确积分 || 0;
-        const rate = att ? Math.round(100 * right / att) : 0;
-        singleRateSpan.innerText = `正确率 ${rate}% (${right}/${att})`;
-
-        document.querySelectorAll('.option').forEach(opt => {
-            opt.classList.remove('correct-highlight', 'wrong-highlight');
-        });
-
-        confirmBtn.disabled = false;
-    }
-
-    // 确认答题逻辑
-    function handleConfirm() {
-        if (answerLock || !currentQuestion) return;
-        const q = currentQuestion;
-        const correctStr = (q.正确答案 || '').replace(/\s/g, '');
-        const correctSet = new Set(correctStr.split(''));
-        const selectedSet = new Set(selectedValues);
-
-        let isCorrect = false;
-        if (correctSet.size === selectedSet.size) {
-            let diff = false;
-            for (let k of correctSet) if (!selectedSet.has(k)) { diff = true; break; }
-            isCorrect = !diff;
-        }
-
-        q.答题次数 = (q.答题次数 || 0) + 1;
-        if (isCorrect) q.正确积分 = (q.正确积分 || 0) + 1;
-        questionsMap.set(q.题号, q);
-
-        const optionDivs = document.querySelectorAll('.option');
-        optionDivs.forEach(div => {
-            const input = div.querySelector('input');
-            const optKey = input.dataset.key;
-            if (correctSet.has(optKey)) {
-                div.classList.add('correct-highlight');
-            } else if (selectedSet.has(optKey) && !correctSet.has(optKey)) {
-                div.classList.add('wrong-highlight');
-            }
-        });
-
-        answerLock = true;
-        confirmBtn.disabled = true;
-        const att = q.答题次数;
-        const right = q.正确积分;
-        const rate = att ? Math.round(100 * right / att) : 0;
-        singleRateSpan.innerText = `正确率 ${rate}% (${right}/${att})`;
-
-        updateStats();
-    }
-
-    function loadNext() {
-        if (!currentCategory) return;
-        const nextQ = pickQuestionByWeight(currentCategory);
-        if (nextQ) {
-            renderQuestion(nextQ);
-        } else {
-            alert('当前类别暂无题目，请返回总览。');
-        }
-    }
-
-    function backToOverview() {
-        overviewPage.classList.remove('hidden');
-        quizPage.classList.add('hidden');
-        updateStats();
-    }
-
-    // 下载训练记录 (JSON格式)
-    function downloadJSON() {
-        if (allQuestions.length === 0) { alert('无题库，无法生成JSON'); return; }
-        const jsonStr = JSON.stringify(allQuestions, null, 2);
-        const blob = new Blob(['\uFEFF' + jsonStr], { type: 'application/json;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `业余无线电训练记录_${new Date().toISOString().slice(0,10)}.json`;
-        link.click();
-        URL.revokeObjectURL(link.href);
-    }
-
-    // 重建分类索引
-    function rebuildCategoryIndices() {
-        categoryQuestions = { A: [], B: [], C: [] };
-        allQuestions.forEach((q, idx) => {
-            if (q.A类 == 1 || q.A类 === '1') categoryQuestions.A.push(idx);
-            if (q.B类 == 1 || q.B类 === '1') categoryQuestions.B.push(idx);
-            if (q.C类 == 1 || q.C类 === '1') categoryQuestions.C.push(idx);
-        });
-    }
-
-    // 解析JSON文件
-    function loadJSONFile(file) {
-        // 禁用按钮
-        selectABtn.disabled = true;
-        selectBBtn.disabled = true;
-        selectCBtn.disabled = true;
-        jsonStatus.innerText = '⏳ 正在解析JSON文件...';
-        jsonStatus.className = 'status-message';
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const jsonText = e.target.result;
-                // 移除可能的BOM
-                const cleanText = jsonText.charCodeAt(0) === 0xFEFF ? jsonText.slice(1) : jsonText;
-                const data = JSON.parse(cleanText);
-                if (!Array.isArray(data)) {
-                    throw new Error('JSON根目录应为数组');
-                }
-                allQuestions = [];
-                questionsMap.clear();
-                data.forEach(item => {
-                    if (!item['题号']) return; // 跳过无效条目
-                    // 确保数值字段为数字
-                    ['A类', 'B类', 'C类', '正确积分', '答题次数'].forEach(k => {
-                        if (item[k] === undefined || item[k] === null) item[k] = 0;
-                        else if (typeof item[k] !== 'number') item[k] = Number(item[k]) || 0;
-                    });
-                    allQuestions.push(item);
-                    questionsMap.set(item['题号'], item);
+            const dataRows = lines.slice(1).map(row => {
+                const obj = {};
+                headers.forEach((header, idx) => {
+                    let value = row[idx] !== undefined ? cleanField(row[idx]) : '';
+                    obj[header] = value;
                 });
 
-                if (allQuestions.length === 0) {
-                    jsonStatus.innerText = '❌ 未找到有效题目（缺少“题号”字段）';
-                    jsonStatus.className = 'status-message status-error';
-                    selectABtn.disabled = false;
-                    selectBBtn.disabled = false;
-                    selectCBtn.disabled = false;
-                    return;
-                }
+                // 确保数值字段存在且为数字
+                ['A类', 'B类', 'C类', '正确积分', '答题次数'].forEach(field => {
+                    if (!(field in obj) || obj[field] === '') {
+                        obj[field] = 0;
+                    } else {
+                        const num = Number(obj[field]);
+                        obj[field] = isNaN(num) ? 0 : num;
+                    }
+                });
 
-                rebuildCategoryIndices();
-                updateStats();
+                // 如果原CSV没有这些字段，补0
+                if (!('正确积分' in obj)) obj['正确积分'] = 0;
+                if (!('答题次数' in obj)) obj['答题次数'] = 0;
 
-                selectABtn.disabled = false;
-                selectBBtn.disabled = false;
-                selectCBtn.disabled = false;
-                jsonStatus.innerText = `✅ JSON加载成功，共 ${allQuestions.length} 题。`;
-                jsonStatus.className = 'status-message status-success';
-            } catch (err) {
-                jsonStatus.innerText = '❌ JSON解析失败：' + err.message;
-                jsonStatus.className = 'status-message status-error';
-                selectABtn.disabled = false;
-                selectBBtn.disabled = false;
-                selectCBtn.disabled = false;
+                return obj;
+            }).filter(obj => obj['题号'] && obj['题号'].trim() !== ''); // 过滤无题号的行
+
+            if (dataRows.length === 0) {
+                throw new Error('没有找到有效题号的行');
             }
-        };
-        reader.onerror = () => {
-            jsonStatus.innerText = '❌ 文件读取失败';
-            jsonStatus.className = 'status-message status-error';
-            selectABtn.disabled = false;
-            selectBBtn.disabled = false;
-            selectCBtn.disabled = false;
-        };
-        reader.readAsText(file, 'UTF-8');
-    }
 
-    // ---------- 事件绑定 ----------
-    jsonFileInput.addEventListener('change', (e) => {
-        if (e.target.files[0]) loadJSONFile(e.target.files[0]);
-    });
+            // 生成JSON
+            const jsonStr = JSON.stringify(dataRows, null, 2);
+            const blob = new Blob(['\uFEFF' + jsonStr], { type: 'application/json;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `业余无线电题库_${new Date().toISOString().slice(0,10)}.json`;
+            link.click();
+            URL.revokeObjectURL(link.href);
 
-    function startTraining(cat) {
-        if (allQuestions.length === 0) { 
-            alert('请先上传JSON题库文件。'); 
-            return; 
+            statusSpan.innerText = `✅ 转换成功！共 ${dataRows.length} 题，已下载。`;
+            statusSpan.className = '';
+        } catch (e) {
+            statusSpan.innerText = '❌ 解析失败：' + e.message;
+            statusSpan.className = 'error';
         }
-        currentCategory = cat;
-        quizCategorySpan.innerText = cat + '类';
-        const firstQ = pickQuestionByWeight(cat);
-        if (!firstQ) { 
-            alert('该类没有题目，请检查题库分类。'); 
-            return; 
-        }
-        overviewPage.classList.add('hidden');
-        quizPage.classList.remove('hidden');
-        renderQuestion(firstQ);
-    }
-
-    selectABtn.addEventListener('click', () => startTraining('A'));
-    selectBBtn.addEventListener('click', () => startTraining('B'));
-    selectCBtn.addEventListener('click', () => startTraining('C'));
-
-    confirmBtn.addEventListener('click', handleConfirm);
-
-    nextBtn.addEventListener('click', () => {
-        if (!currentCategory) backToOverview();
-        else loadNext();
     });
-
-    exitQuizBtn.addEventListener('click', () => {
-        downloadJSON();
-        backToOverview();
-    });
-
-    // 初始状态
-    updateStats();
 })();
 </script>
-<!-- 使用说明：
-     1. 准备JSON文件，格式为数组，每个对象包含CSV所有字段及“正确积分”“答题次数”。
-     2. 上传JSON后，A/B/C类按钮自动启用。
-     3. 答题过程实时更新“正确积分”和“答题次数”。
-     4. 点击“退出训练 & 下载JSON”即可保存当前进度。
-     5. 图片将从 https://enigma-k.github.io/site/图片/ 自动加载，文件名需与“是否包含图片”字段一致。
-     6. 若PapaParse加载失败，请检查网络或更换其他CDN。
--->
 </body>
 </html>
