@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>业余无线电 CSV → JSON 转换器</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            max-width: 1000px;
+            margin: 30px auto;
+            padding: 20px;
+            background: #f5f7fa;
+        }
+        .container {
+            background: white;
+            border-radius: 28px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        h2 {
+            margin-top: 0;
+            color: #1e3c5f;
+        }
+        textarea {
+            width: 100%;
+            height: 300px;
+            font-family: monospace;
+            padding: 15px;
+            border-radius: 20px;
+            border: 2px dashed #a0b8cc;
+            resize: vertical;
+            margin: 20px 0;
+        }
+        .btn {
+            background: #1e3c5f;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 40px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            margin-right: 15px;
+        }
+        .btn:hover {
+            background: #15324d;
+        }
+        .info {
+            background: #eef3f9;
+            padding: 15px;
+            border-radius: 20px;
+            margin: 20px 0;
+        }
+        .note {
+            color: #2b4f6e;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>📁 业余无线电题库 CSV → JSON 转换器</h2>
+    <div class="info">
+        <p>1. 将您原有的CSV文件内容（用记事本打开，全选复制）粘贴到下方文本域中。</p>
+        <p>2. 点击“生成JSON并下载”，即可获得包含“正确积分”和“答题次数”字段的新JSON文件。</p>
+        <p>3. 新JSON可直接用于答题训练软件（所有题目的积分和次数初始为0）。</p>
+    </div>
+    <textarea id="csvInput" placeholder="请粘贴CSV内容..."></textarea>
+    <div>
+        <button class="btn" id="convertBtn">生成JSON并下载</button>
+        <span id="status" style="color:#1f7840;"></span>
+    </div>
+    <p class="note">⚠️ 确保CSV第一行包含以下列名（顺序不限）：<br>
+        题号,题干,正确答案,选项A,选项B,选项C,选项D,是否包含图片,A类,B类,C类,正确积分,答题次数<br>
+        （正确积分和答题次数若不存在，将自动补0）</p>
+</div>
+
+<script>
+    document.getElementById('convertBtn').addEventListener('click', function() {
+        const csvText = document.getElementById('csvInput').value.trim();
+        if (!csvText) {
+            alert('请输入CSV内容');
+            return;
+        }
+
+        const status = document.getElementById('status');
+        status.innerText = '解析中...';
+
+        PapaParse.parse(csvText, {
+            header: true,
+            skipEmptyLines: true,
+            complete: (results) => {
+                const rawData = results.data;
+                if (rawData.length === 0) {
+                    status.innerText = '❌ 无有效数据';
+                    return;
+                }
+
+                // 处理每一行，确保数值字段存在，并添加缺失的字段
+                const jsonData = rawData.map(row => {
+                    // 如果某行缺少必要的字段，保留原有内容，但确保有“题号”
+                    if (!row['题号']) return null; // 忽略无题号的行
+
+                    // 确保数值字段为数字，且存在
+                    ['A类', 'B类', 'C类', '正确积分', '答题次数'].forEach(k => {
+                        if (row[k] === undefined || row[k] === '') {
+                            row[k] = 0;
+                        } else {
+                            row[k] = Number(row[k]) || 0;
+                        }
+                    });
+
+                    // 如果CSV中没有“正确积分”或“答题次数”列，它们会被解析为undefined，上面已处理为0
+                    // 返回处理后的行
+                    return row;
+                }).filter(row => row !== null);
+
+                if (jsonData.length === 0) {
+                    status.innerText = '❌ 未找到任何有效题目（缺少“题号”列）';
+                    return;
+                }
+
+                // 生成JSON字符串
+                const jsonStr = JSON.stringify(jsonData, null, 2);
+                const blob = new Blob(['\uFEFF' + jsonStr], { type: 'application/json;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `业余无线电题库_${new Date().toISOString().slice(0,10)}.json`;
+                link.click();
+                URL.revokeObjectURL(link.href);
+
+                status.innerText = `✅ 转换成功！共 ${jsonData.length} 题，已下载。`;
+            },
+            error: (err) => {
+                status.innerText = '❌ 解析失败：' + err;
+            }
+        });
+    });
+</script>
+</body>
+</html>
