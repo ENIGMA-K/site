@@ -89,6 +89,11 @@
             color: #1e3c5f;
         }
         .btn:active { transform: scale(0.97); }
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
         .file-zone {
             background: #f1f4f8;
             border-radius: 20px;
@@ -240,9 +245,9 @@
         <div class="flex-row" style="margin: 24px 0 12px;">
             <span style="font-weight: 600; color: #0b2a41;">⚡ 开始训练</span>
             <div style="display: flex; gap: 10px;">
-                <button class="btn btn-outline" id="selectA">A类</button>
-                <button class="btn btn-outline" id="selectB">B类</button>
-                <button class="btn btn-outline" id="selectC">C类</button>
+                <button class="btn btn-outline" id="selectA" disabled>A类</button>
+                <button class="btn btn-outline" id="selectB" disabled>B类</button>
+                <button class="btn btn-outline" id="selectC" disabled>C类</button>
             </div>
         </div>
         <p style="color:#2b4f6e;">选择类别后进入答题，题目按权重随机出现。</p>
@@ -329,9 +334,9 @@
             const att = q.答题次数 || 0;
             totalRight += right;
             totalAttempt += att;
-            if (q.A类 === 1 || q.A类 === '1') { aRight += right; aAttempt += att; }
-            if (q.B类 === 1 || q.B类 === '1') { bRight += right; bAttempt += att; }
-            if (q.C类 === 1 || q.C类 === '1') { cRight += right; cAttempt += att; }
+            if (q.A类 == 1 || q.A类 === '1') { aRight += right; aAttempt += att; }
+            if (q.B类 == 1 || q.B类 === '1') { bRight += right; bAttempt += att; }
+            if (q.C类 == 1 || q.C类 === '1') { cRight += right; cAttempt += att; }
         });
 
         totalPercentEl.innerText = totalAttempt ? Math.round(100 * totalRight / totalAttempt) + '%' : '0%';
@@ -587,18 +592,28 @@
         });
     }
 
-    // 解析主CSV
+    // 解析主CSV（修改后：增加按钮启用逻辑）
     function loadCSVFile(file) {
+        // 解析前禁用按钮
+        selectABtn.disabled = true;
+        selectBBtn.disabled = true;
+        selectCBtn.disabled = true;
+
         PapaParse.parse(file, {
             header: true,
             skipEmptyLines: true,
             complete: (results) => {
                 const raw = results.data;
+                if (raw.length === 0) {
+                    alert('CSV文件为空或解析失败，请检查文件内容。');
+                    // 保持禁用
+                    return;
+                }
                 allQuestions = [];
                 questionsMap.clear();
                 raw.forEach(row => {
-                    if (!row['题号']) return;
-                    // 处理数值
+                    if (!row['题号']) return; // 跳过无题号的行
+                    // 处理数值字段
                     ['A类', 'B类', 'C类', '正确积分', '答题次数'].forEach(k => {
                         if (row[k] === '' || row[k] === undefined) row[k] = 0;
                         else if (!isNaN(parseFloat(row[k]))) row[k] = parseFloat(row[k]);
@@ -606,9 +621,24 @@
                     allQuestions.push(row);
                     questionsMap.set(row['题号'], row);
                 });
+
+                if (allQuestions.length === 0) {
+                    alert('未解析到任何有效题目，请检查CSV中是否包含“题号”列。');
+                    return;
+                }
+
                 rebuildCategoryIndices();
                 updateStats();
-                alert(`题库加载完成，共 ${allQuestions.length} 题`);
+
+                // 解析完成，启用按钮
+                selectABtn.disabled = false;
+                selectBBtn.disabled = false;
+                selectCBtn.disabled = false;
+
+                alert(`题库加载成功，共 ${allQuestions.length} 题。`);
+            },
+            error: (err) => {
+                alert('CSV解析错误：' + err);
             }
         });
     }
@@ -623,11 +653,17 @@
     });
 
     function startTraining(cat) {
-        if (allQuestions.length === 0) { alert('请先加载题库'); return; }
+        if (allQuestions.length === 0) { 
+            alert('题库尚未加载，请先上传CSV文件。'); 
+            return; 
+        }
         currentCategory = cat;
         quizCategorySpan.innerText = cat + '类';
         const firstQ = pickQuestionByWeight(cat);
-        if (!firstQ) { alert('该类没有题目'); return; }
+        if (!firstQ) { 
+            alert('该类没有题目，请检查题库分类。'); 
+            return; 
+        }
         overviewPage.classList.add('hidden');
         quizPage.classList.remove('hidden');
         renderQuestion(firstQ);
