@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>业余无线电·答题训练 (在线图片版)</title>
-    <!-- 使用 PapaParse 解析 CSV (增加本地fallback) -->
+    <title>业余无线电·答题训练 (在线图片版·稳定版)</title>
+    <!-- 使用 PapaParse 解析 CSV (带超时保护) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
+        /* 样式与之前相同，此处省略以节省篇幅，实际使用时请保留完整样式 */
         * {
             box-sizing: border-box;
             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
@@ -48,13 +49,6 @@
             font-size: 1.2rem;
             color: #2c3e50;
             margin: 16px 0 8px;
-        }
-        .card {
-            background: #f9fafc;
-            border-radius: 24px;
-            padding: 20px;
-            margin: 18px 0;
-            border: 1px solid #e9ecf0;
         }
         .flex-row {
             display: flex;
@@ -336,6 +330,9 @@
     const csvStatus = document.getElementById('csvStatus');
     const recordStatus = document.getElementById('recordStatus');
 
+    // 超时定时器ID
+    let parseTimeout = null;
+
     // 检查 PapaParse 是否加载成功
     if (typeof Papa === 'undefined') {
         csvStatus.innerText = '❌ 错误：PapaParse 库加载失败，请刷新页面重试。';
@@ -606,7 +603,11 @@
         });
     }
 
+    // 解析主CSV（带超时保护）
     function loadCSVFile(file) {
+        // 清除之前的超时
+        if (parseTimeout) clearTimeout(parseTimeout);
+
         // 禁用按钮，更新状态
         selectABtn.disabled = true;
         selectBBtn.disabled = true;
@@ -614,16 +615,39 @@
         csvStatus.innerText = '⏳ 正在解析题库...';
         csvStatus.className = 'status-message';
 
+        // 设置超时：10秒后如果还没有完成，则认为解析卡死
+        parseTimeout = setTimeout(() => {
+            csvStatus.innerText = '❌ 解析超时，请检查文件格式或大小。';
+            csvStatus.className = 'status-message status-error';
+            // 超时后启用按钮（但题库无效）
+            selectABtn.disabled = false;
+            selectBBtn.disabled = false;
+            selectCBtn.disabled = false;
+            parseTimeout = null;
+        }, 10000);
+
         PapaParse.parse(file, {
             header: true,
             skipEmptyLines: true,
+            encoding: 'UTF-8',
             complete: (results) => {
+                // 清除超时
+                if (parseTimeout) {
+                    clearTimeout(parseTimeout);
+                    parseTimeout = null;
+                }
+
                 const raw = results.data;
                 if (raw.length === 0) {
                     csvStatus.innerText = '❌ CSV文件为空或无法解析。';
                     csvStatus.className = 'status-message status-error';
+                    // 启用按钮
+                    selectABtn.disabled = false;
+                    selectBBtn.disabled = false;
+                    selectCBtn.disabled = false;
                     return;
                 }
+
                 allQuestions = [];
                 questionsMap.clear();
                 raw.forEach(row => {
@@ -639,6 +663,9 @@
                 if (allQuestions.length === 0) {
                     csvStatus.innerText = '❌ 未找到有效题目（缺少“题号”列）';
                     csvStatus.className = 'status-message status-error';
+                    selectABtn.disabled = false;
+                    selectBBtn.disabled = false;
+                    selectCBtn.disabled = false;
                     return;
                 }
 
@@ -653,8 +680,15 @@
                 csvStatus.className = 'status-message status-success';
             },
             error: (err) => {
+                if (parseTimeout) {
+                    clearTimeout(parseTimeout);
+                    parseTimeout = null;
+                }
                 csvStatus.innerText = '❌ CSV解析错误：' + err;
                 csvStatus.className = 'status-message status-error';
+                selectABtn.disabled = false;
+                selectBBtn.disabled = false;
+                selectCBtn.disabled = false;
             }
         });
     }
