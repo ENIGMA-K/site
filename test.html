@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>业余无线电·答题训练 (在线图片版·稳定版)</title>
-    <!-- 使用 PapaParse 解析 CSV (带超时保护) -->
+    <title>业余无线电·答题训练 (JSON单文件版)</title>
+    <!-- 使用 PapaParse 解析 CSV (保留以兼容旧格式，但实际改为JSON) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
-        /* 样式与之前相同，此处省略以节省篇幅，实际使用时请保留完整样式 */
         * {
             box-sizing: border-box;
             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
@@ -236,14 +235,11 @@
 
     <!-- 总览界面 OVERVIEW PAGE -->
     <div id="overviewPage" class="page">
-        <h2>📊 训练总览</h2>
+        <h2>📊 训练总览 (JSON单文件)</h2>
         <div class="file-zone">
-            <p style="margin-bottom: 16px; font-weight: 500;">📂 1. 加载题库 (CSV文件)</p>
-            <input type="file" id="csvFileInput" accept=".csv, text/csv" style="margin-bottom: 20px;">
-            <div id="csvStatus" class="status-message">等待上传题库...</div>
-            <p style="margin: 20px 0 8px;">📁 2. 加载训练记录 (可选，用于恢复进度)</p>
-            <input type="file" id="recordFileInput" accept=".csv, text/csv">
-            <div id="recordStatus" class="status-message" style="margin-top:16px;"></div>
+            <p style="margin-bottom: 16px; font-weight: 500;">📂 加载题库及训练记录 (JSON文件)</p>
+            <input type="file" id="jsonFileInput" accept=".json, application/json" style="margin-bottom: 20px;">
+            <div id="jsonStatus" class="status-message">等待上传JSON文件...</div>
         </div>
 
         <div class="stats-grid" id="statsContainer">
@@ -261,14 +257,14 @@
                 <button class="btn btn-outline" id="selectC" disabled>C类</button>
             </div>
         </div>
-        <p style="color:#2b4f6e;">选择类别后进入答题，题目按权重随机出现。</p>
+        <p style="color:#2b4f6e;">选择类别后进入答题，题目按权重随机出现。退出时自动下载JSON。</p>
     </div>
 
     <!-- 答题界面 QUIZ PAGE -->
     <div id="quizPage" class="page hidden">
         <div class="flex-row" style="margin-bottom: 8px;">
             <h3 style="margin:0;">📝 答题中 · <span id="quizCategory">A类</span></h3>
-            <button class="btn btn-outline" id="exitQuizBtn">🏁 退出训练</button>
+            <button class="btn btn-outline" id="exitQuizBtn">🏁 退出训练 & 下载JSON</button>
         </div>
         <div class="question-container" id="quizCard">
             <div class="question-header">
@@ -293,7 +289,7 @@
 <script>
 (function() {
     // ---------- 核心数据 ----------
-    let allQuestions = [];                 // 原始题库 (从CSV解析)
+    let allQuestions = [];                 // 原始题库 (从JSON解析)
     let questionsMap = new Map();          // 题号 -> 题目对象 (快速更新)
     let categoryQuestions = { A: [], B: [], C: [] }; // 分类后的题号索引
     let currentCategory = 'A';              // 当前训练类别
@@ -313,8 +309,7 @@
     // 页面元素
     const overviewPage = document.getElementById('overviewPage');
     const quizPage = document.getElementById('quizPage');
-    const csvInput = document.getElementById('csvFileInput');
-    const recordInput = document.getElementById('recordFileInput');
+    const jsonFileInput = document.getElementById('jsonFileInput');
     const selectABtn = document.getElementById('selectA');
     const selectBBtn = document.getElementById('selectB');
     const selectCBtn = document.getElementById('selectC');
@@ -327,17 +322,7 @@
     const confirmBtn = document.getElementById('confirmBtn');
     const nextBtn = document.getElementById('nextBtn');
     const questionTypeSpan = document.getElementById('questionType');
-    const csvStatus = document.getElementById('csvStatus');
-    const recordStatus = document.getElementById('recordStatus');
-
-    // 超时定时器ID
-    let parseTimeout = null;
-
-    // 检查 PapaParse 是否加载成功
-    if (typeof Papa === 'undefined') {
-        csvStatus.innerText = '❌ 错误：PapaParse 库加载失败，请刷新页面重试。';
-        csvStatus.className = 'status-message status-error';
-    }
+    const jsonStatus = document.getElementById('jsonStatus');
 
     // ---------- 辅助函数 ----------
     function updateStats() {
@@ -352,7 +337,7 @@
         let aRight = 0, aAttempt = 0, bRight = 0, bAttempt = 0, cRight = 0, cAttempt = 0;
 
         allQuestions.forEach(q => {
-            const right = q.correct积分 || 0;
+            const right = q.正确积分 || 0;
             const att = q.答题次数 || 0;
             totalRight += right;
             totalAttempt += att;
@@ -370,7 +355,7 @@
     // 权重计算
     function getWeight(question) {
         const att = question.答题次数 || 0;
-        const right = question.correct积分 || 0;
+        const right = question.正确积分 || 0;
         return (att - right + 2) / (att + 3);
     }
 
@@ -477,7 +462,7 @@
         });
 
         const att = q.答题次数 || 0;
-        const right = q.correct积分 || 0;
+        const right = q.正确积分 || 0;
         const rate = att ? Math.round(100 * right / att) : 0;
         singleRateSpan.innerText = `正确率 ${rate}% (${right}/${att})`;
 
@@ -504,7 +489,7 @@
         }
 
         q.答题次数 = (q.答题次数 || 0) + 1;
-        if (isCorrect) q.correct积分 = (q.correct积分 || 0) + 1;
+        if (isCorrect) q.正确积分 = (q.正确积分 || 0) + 1;
         questionsMap.set(q.题号, q);
 
         const optionDivs = document.querySelectorAll('.option');
@@ -521,7 +506,7 @@
         answerLock = true;
         confirmBtn.disabled = true;
         const att = q.答题次数;
-        const right = q.correct积分;
+        const right = q.正确积分;
         const rate = att ? Math.round(100 * right / att) : 0;
         singleRateSpan.innerText = `正确率 ${rate}% (${right}/${att})`;
 
@@ -544,56 +529,19 @@
         updateStats();
     }
 
-    function downloadRecord() {
-        if (allQuestions.length === 0) { alert('无题库，无法生成记录'); return; }
-        let csvRows = ['题号,正确积分,答题次数'];
-        allQuestions.forEach(q => {
-            csvRows.push(`${q.题号},${q.correct积分 || 0},${q.答题次数 || 0}`);
-        });
-        const csvString = csvRows.join('\n');
-        const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
+    // 下载训练记录 (JSON格式)
+    function downloadJSON() {
+        if (allQuestions.length === 0) { alert('无题库，无法生成JSON'); return; }
+        const jsonStr = JSON.stringify(allQuestions, null, 2);
+        const blob = new Blob(['\uFEFF' + jsonStr], { type: 'application/json;charset=utf-8;' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = `训练记录_${new Date().toISOString().slice(0,10)}.csv`;
+        link.download = `业余无线电训练记录_${new Date().toISOString().slice(0,10)}.json`;
         link.click();
         URL.revokeObjectURL(link.href);
     }
 
-    function loadRecordFile(file) {
-        recordStatus.innerText = '解析记录中...';
-        recordStatus.className = 'status-message';
-        PapaParse.parse(file, {
-            header: true,
-            skipEmptyLines: true,
-            complete: (result) => {
-                const rows = result.data;
-                let count = 0;
-                rows.forEach(row => {
-                    const qn = row['题号']?.trim();
-                    if (!qn) return;
-                    const correct = parseInt(row['正确积分']) || 0;
-                    const attempts = parseInt(row['答题次数']) || 0;
-                    if (questionsMap.has(qn)) {
-                        const q = questionsMap.get(qn);
-                        q.correct积分 = correct;
-                        q.答题次数 = attempts;
-                        questionsMap.set(qn, q);
-                        count++;
-                    }
-                });
-                allQuestions = Array.from(questionsMap.values());
-                rebuildCategoryIndices();
-                updateStats();
-                recordStatus.innerText = `✅ 已合并 ${count} 条记录。`;
-                recordStatus.className = 'status-message status-success';
-            },
-            error: (err) => {
-                recordStatus.innerText = '❌ 记录解析失败：' + err;
-                recordStatus.className = 'status-message status-error';
-            }
-        });
-    }
-
+    // 重建分类索引
     function rebuildCategoryIndices() {
         categoryQuestions = { A: [], B: [], C: [] };
         allQuestions.forEach((q, idx) => {
@@ -603,66 +551,41 @@
         });
     }
 
-    // 解析主CSV（带超时保护）
-    function loadCSVFile(file) {
-        // 清除之前的超时
-        if (parseTimeout) clearTimeout(parseTimeout);
-
-        // 禁用按钮，更新状态
+    // 解析JSON文件
+    function loadJSONFile(file) {
+        // 禁用按钮
         selectABtn.disabled = true;
         selectBBtn.disabled = true;
         selectCBtn.disabled = true;
-        csvStatus.innerText = '⏳ 正在解析题库...';
-        csvStatus.className = 'status-message';
+        jsonStatus.innerText = '⏳ 正在解析JSON文件...';
+        jsonStatus.className = 'status-message';
 
-        // 设置超时：10秒后如果还没有完成，则认为解析卡死
-        parseTimeout = setTimeout(() => {
-            csvStatus.innerText = '❌ 解析超时，请检查文件格式或大小。';
-            csvStatus.className = 'status-message status-error';
-            // 超时后启用按钮（但题库无效）
-            selectABtn.disabled = false;
-            selectBBtn.disabled = false;
-            selectCBtn.disabled = false;
-            parseTimeout = null;
-        }, 10000);
-
-        PapaParse.parse(file, {
-            header: true,
-            skipEmptyLines: true,
-            encoding: 'UTF-8',
-            complete: (results) => {
-                // 清除超时
-                if (parseTimeout) {
-                    clearTimeout(parseTimeout);
-                    parseTimeout = null;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const jsonText = e.target.result;
+                // 移除可能的BOM
+                const cleanText = jsonText.charCodeAt(0) === 0xFEFF ? jsonText.slice(1) : jsonText;
+                const data = JSON.parse(cleanText);
+                if (!Array.isArray(data)) {
+                    throw new Error('JSON根目录应为数组');
                 }
-
-                const raw = results.data;
-                if (raw.length === 0) {
-                    csvStatus.innerText = '❌ CSV文件为空或无法解析。';
-                    csvStatus.className = 'status-message status-error';
-                    // 启用按钮
-                    selectABtn.disabled = false;
-                    selectBBtn.disabled = false;
-                    selectCBtn.disabled = false;
-                    return;
-                }
-
                 allQuestions = [];
                 questionsMap.clear();
-                raw.forEach(row => {
-                    if (!row['题号']) return;
+                data.forEach(item => {
+                    if (!item['题号']) return; // 跳过无效条目
+                    // 确保数值字段为数字
                     ['A类', 'B类', 'C类', '正确积分', '答题次数'].forEach(k => {
-                        if (row[k] === '' || row[k] === undefined) row[k] = 0;
-                        else if (!isNaN(parseFloat(row[k]))) row[k] = parseFloat(row[k]);
+                        if (item[k] === undefined || item[k] === null) item[k] = 0;
+                        else if (typeof item[k] !== 'number') item[k] = Number(item[k]) || 0;
                     });
-                    allQuestions.push(row);
-                    questionsMap.set(row['题号'], row);
+                    allQuestions.push(item);
+                    questionsMap.set(item['题号'], item);
                 });
 
                 if (allQuestions.length === 0) {
-                    csvStatus.innerText = '❌ 未找到有效题目（缺少“题号”列）';
-                    csvStatus.className = 'status-message status-error';
+                    jsonStatus.innerText = '❌ 未找到有效题目（缺少“题号”字段）';
+                    jsonStatus.className = 'status-message status-error';
                     selectABtn.disabled = false;
                     selectBBtn.disabled = false;
                     selectCBtn.disabled = false;
@@ -672,39 +595,37 @@
                 rebuildCategoryIndices();
                 updateStats();
 
-                // 解析成功，启用按钮
                 selectABtn.disabled = false;
                 selectBBtn.disabled = false;
                 selectCBtn.disabled = false;
-                csvStatus.innerText = `✅ 题库加载成功，共 ${allQuestions.length} 题。`;
-                csvStatus.className = 'status-message status-success';
-            },
-            error: (err) => {
-                if (parseTimeout) {
-                    clearTimeout(parseTimeout);
-                    parseTimeout = null;
-                }
-                csvStatus.innerText = '❌ CSV解析错误：' + err;
-                csvStatus.className = 'status-message status-error';
+                jsonStatus.innerText = `✅ JSON加载成功，共 ${allQuestions.length} 题。`;
+                jsonStatus.className = 'status-message status-success';
+            } catch (err) {
+                jsonStatus.innerText = '❌ JSON解析失败：' + err.message;
+                jsonStatus.className = 'status-message status-error';
                 selectABtn.disabled = false;
                 selectBBtn.disabled = false;
                 selectCBtn.disabled = false;
             }
-        });
+        };
+        reader.onerror = () => {
+            jsonStatus.innerText = '❌ 文件读取失败';
+            jsonStatus.className = 'status-message status-error';
+            selectABtn.disabled = false;
+            selectBBtn.disabled = false;
+            selectCBtn.disabled = false;
+        };
+        reader.readAsText(file, 'UTF-8');
     }
 
     // ---------- 事件绑定 ----------
-    csvInput.addEventListener('change', (e) => {
-        if (e.target.files[0]) loadCSVFile(e.target.files[0]);
-    });
-
-    recordInput.addEventListener('change', (e) => {
-        if (e.target.files[0]) loadRecordFile(e.target.files[0]);
+    jsonFileInput.addEventListener('change', (e) => {
+        if (e.target.files[0]) loadJSONFile(e.target.files[0]);
     });
 
     function startTraining(cat) {
         if (allQuestions.length === 0) { 
-            alert('题库尚未加载，请先上传CSV文件。'); 
+            alert('请先上传JSON题库文件。'); 
             return; 
         }
         currentCategory = cat;
@@ -731,7 +652,7 @@
     });
 
     exitQuizBtn.addEventListener('click', () => {
-        downloadRecord();
+        downloadJSON();
         backToOverview();
     });
 
@@ -739,6 +660,12 @@
     updateStats();
 })();
 </script>
-<!-- 使用说明：加载CSV题库，选择类别开始训练。图片将从 https://enigma-k.github.io/site/图片/ 自动加载，请确保文件名与CSV中“是否包含图片”一栏完全一致。 -->
+<!-- 使用说明：
+     1. 准备JSON文件，格式为数组，每个对象包含CSV所有字段及“正确积分”“答题次数”。
+     2. 上传JSON后，A/B/C类按钮自动启用。
+     3. 答题过程实时更新“正确积分”和“答题次数”。
+     4. 点击“退出训练 & 下载JSON”即可保存当前进度。
+     5. 图片将从 https://enigma-k.github.io/site/图片/ 自动加载，文件名需与“是否包含图片”字段一致。
+-->
 </body>
 </html>
