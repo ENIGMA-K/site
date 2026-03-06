@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>业余无线电·答题训练 (在线图片版)</title>
-    <!-- 使用 PapaParse 解析 CSV (轻量可靠) -->
+    <!-- 使用 PapaParse 解析 CSV (增加本地fallback) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         * {
@@ -214,7 +214,22 @@
             margin-top: 20px;
             text-align: center;
         }
-        /* 手机优化 */
+        .status-message {
+            margin-top: 16px;
+            padding: 12px;
+            border-radius: 40px;
+            background: #e6edf6;
+            color: #1e3c5f;
+            font-weight: 500;
+        }
+        .status-error {
+            background: #ffe8e6;
+            color: #b53b2b;
+        }
+        .status-success {
+            background: #dff0d8;
+            color: #1f7840;
+        }
         @media (max-width: 600px) {
             .btn { padding: 12px 18px; }
             .stat-number { font-size: 1.8rem; }
@@ -231,8 +246,10 @@
         <div class="file-zone">
             <p style="margin-bottom: 16px; font-weight: 500;">📂 1. 加载题库 (CSV文件)</p>
             <input type="file" id="csvFileInput" accept=".csv, text/csv" style="margin-bottom: 20px;">
+            <div id="csvStatus" class="status-message">等待上传题库...</div>
             <p style="margin: 20px 0 8px;">📁 2. 加载训练记录 (可选，用于恢复进度)</p>
             <input type="file" id="recordFileInput" accept=".csv, text/csv">
+            <div id="recordStatus" class="status-message" style="margin-top:16px;"></div>
         </div>
 
         <div class="stats-grid" id="statsContainer">
@@ -316,6 +333,14 @@
     const confirmBtn = document.getElementById('confirmBtn');
     const nextBtn = document.getElementById('nextBtn');
     const questionTypeSpan = document.getElementById('questionType');
+    const csvStatus = document.getElementById('csvStatus');
+    const recordStatus = document.getElementById('recordStatus');
+
+    // 检查 PapaParse 是否加载成功
+    if (typeof Papa === 'undefined') {
+        csvStatus.innerText = '❌ 错误：PapaParse 库加载失败，请刷新页面重试。';
+        csvStatus.className = 'status-message status-error';
+    }
 
     // ---------- 辅助函数 ----------
     function updateStats() {
@@ -397,14 +422,12 @@
         imageContainer.innerHTML = '';
         if (q.是否包含图片 && q.是否包含图片.trim() !== '') {
             const imgFile = q.是否包含图片.trim();
-            // 对文件名进行URI编码，以支持中文和特殊字符
             const encodedFileName = encodeURIComponent(imgFile);
             const imgUrl = IMAGE_BASE_URL + encodedFileName;
             const img = document.createElement('img');
             img.src = imgUrl;
             img.alt = '题图';
             img.classList.add('q-img');
-            // 图片加载失败时的处理
             img.onerror = () => {
                 img.style.display = 'none';
                 const errorSpan = document.createElement('span');
@@ -418,12 +441,10 @@
             imageContainer.appendChild(img);
         }
 
-        // 判断单选/多选
         const correctStr = (q.正确答案 || '').replace(/\s/g, '');
         const isMulti = correctStr.length > 1;
         questionTypeSpan.innerText = isMulti ? '多选题' : '单选题';
 
-        // 生成选项HTML
         const shuffled = shuffleOptions(q);
         optionsDiv.innerHTML = '';
         shuffled.forEach(opt => {
@@ -458,18 +479,15 @@
             optionsDiv.appendChild(optionDiv);
         });
 
-        // 单题正确率
         const att = q.答题次数 || 0;
         const right = q.correct积分 || 0;
         const rate = att ? Math.round(100 * right / att) : 0;
         singleRateSpan.innerText = `正确率 ${rate}% (${right}/${att})`;
 
-        // 移除所有高亮class
         document.querySelectorAll('.option').forEach(opt => {
             opt.classList.remove('correct-highlight', 'wrong-highlight');
         });
 
-        // 启用确认按钮
         confirmBtn.disabled = false;
     }
 
@@ -481,7 +499,6 @@
         const correctSet = new Set(correctStr.split(''));
         const selectedSet = new Set(selectedValues);
 
-        // 判断对错 (多选要求完全一致)
         let isCorrect = false;
         if (correctSet.size === selectedSet.size) {
             let diff = false;
@@ -489,13 +506,10 @@
             isCorrect = !diff;
         }
 
-        // 更新积分/次数
         q.答题次数 = (q.答题次数 || 0) + 1;
         if (isCorrect) q.correct积分 = (q.correct积分 || 0) + 1;
-        // 更新map
         questionsMap.set(q.题号, q);
 
-        // 高亮选项
         const optionDivs = document.querySelectorAll('.option');
         optionDivs.forEach(div => {
             const input = div.querySelector('input');
@@ -507,20 +521,16 @@
             }
         });
 
-        // 锁定
         answerLock = true;
         confirmBtn.disabled = true;
-        // 刷新单题正确率
         const att = q.答题次数;
         const right = q.correct积分;
         const rate = att ? Math.round(100 * right / att) : 0;
         singleRateSpan.innerText = `正确率 ${rate}% (${right}/${att})`;
 
-        // 更新总览统计（后台）
         updateStats();
     }
 
-    // 下一题
     function loadNext() {
         if (!currentCategory) return;
         const nextQ = pickQuestionByWeight(currentCategory);
@@ -531,14 +541,12 @@
         }
     }
 
-    // 重置页面到总览
     function backToOverview() {
         overviewPage.classList.remove('hidden');
         quizPage.classList.add('hidden');
         updateStats();
     }
 
-    // 退出并下载训练记录
     function downloadRecord() {
         if (allQuestions.length === 0) { alert('无题库，无法生成记录'); return; }
         let csvRows = ['题号,正确积分,答题次数'];
@@ -554,13 +562,15 @@
         URL.revokeObjectURL(link.href);
     }
 
-    // 加载训练记录文件 (更新积分/次数)
     function loadRecordFile(file) {
+        recordStatus.innerText = '解析记录中...';
+        recordStatus.className = 'status-message';
         PapaParse.parse(file, {
             header: true,
             skipEmptyLines: true,
             complete: (result) => {
                 const rows = result.data;
+                let count = 0;
                 rows.forEach(row => {
                     const qn = row['题号']?.trim();
                     if (!qn) return;
@@ -571,18 +581,22 @@
                         q.correct积分 = correct;
                         q.答题次数 = attempts;
                         questionsMap.set(qn, q);
+                        count++;
                     }
                 });
-                // 重建 allQuestions 数组 (保持引用)
                 allQuestions = Array.from(questionsMap.values());
                 rebuildCategoryIndices();
                 updateStats();
-                alert('训练记录已合并');
+                recordStatus.innerText = `✅ 已合并 ${count} 条记录。`;
+                recordStatus.className = 'status-message status-success';
+            },
+            error: (err) => {
+                recordStatus.innerText = '❌ 记录解析失败：' + err;
+                recordStatus.className = 'status-message status-error';
             }
         });
     }
 
-    // 重建分类索引 (根据当前allQuestions)
     function rebuildCategoryIndices() {
         categoryQuestions = { A: [], B: [], C: [] };
         allQuestions.forEach((q, idx) => {
@@ -592,12 +606,13 @@
         });
     }
 
-    // 解析主CSV（修改后：增加按钮启用逻辑）
     function loadCSVFile(file) {
-        // 解析前禁用按钮
+        // 禁用按钮，更新状态
         selectABtn.disabled = true;
         selectBBtn.disabled = true;
         selectCBtn.disabled = true;
+        csvStatus.innerText = '⏳ 正在解析题库...';
+        csvStatus.className = 'status-message';
 
         PapaParse.parse(file, {
             header: true,
@@ -605,15 +620,14 @@
             complete: (results) => {
                 const raw = results.data;
                 if (raw.length === 0) {
-                    alert('CSV文件为空或解析失败，请检查文件内容。');
-                    // 保持禁用
+                    csvStatus.innerText = '❌ CSV文件为空或无法解析。';
+                    csvStatus.className = 'status-message status-error';
                     return;
                 }
                 allQuestions = [];
                 questionsMap.clear();
                 raw.forEach(row => {
-                    if (!row['题号']) return; // 跳过无题号的行
-                    // 处理数值字段
+                    if (!row['题号']) return;
                     ['A类', 'B类', 'C类', '正确积分', '答题次数'].forEach(k => {
                         if (row[k] === '' || row[k] === undefined) row[k] = 0;
                         else if (!isNaN(parseFloat(row[k]))) row[k] = parseFloat(row[k]);
@@ -623,22 +637,24 @@
                 });
 
                 if (allQuestions.length === 0) {
-                    alert('未解析到任何有效题目，请检查CSV中是否包含“题号”列。');
+                    csvStatus.innerText = '❌ 未找到有效题目（缺少“题号”列）';
+                    csvStatus.className = 'status-message status-error';
                     return;
                 }
 
                 rebuildCategoryIndices();
                 updateStats();
 
-                // 解析完成，启用按钮
+                // 解析成功，启用按钮
                 selectABtn.disabled = false;
                 selectBBtn.disabled = false;
                 selectCBtn.disabled = false;
-
-                alert(`题库加载成功，共 ${allQuestions.length} 题。`);
+                csvStatus.innerText = `✅ 题库加载成功，共 ${allQuestions.length} 题。`;
+                csvStatus.className = 'status-message status-success';
             },
             error: (err) => {
-                alert('CSV解析错误：' + err);
+                csvStatus.innerText = '❌ CSV解析错误：' + err;
+                csvStatus.className = 'status-message status-error';
             }
         });
     }
@@ -685,7 +701,7 @@
         backToOverview();
     });
 
-    // 初始状态，只显示总览，无数据
+    // 初始状态
     updateStats();
 })();
 </script>
