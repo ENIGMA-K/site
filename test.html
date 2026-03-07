@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>业余无线电·答题训练 (进阶版·配色优化)</title>
+    <title>业余无线电·答题训练 (高清同心圆·灵动图例)</title>
     <style>
         * {
             box-sizing: border-box;
@@ -88,43 +88,65 @@
             border: 2px dashed #a0b8cc;
             margin: 8px 0 16px;
         }
-        /* 总览统计卡片 */
+        /* 总览统计卡片 - 灵动图例 */
         .stats-row {
             display: flex;
-            flex-wrap: wrap;
-            gap: 24px;
-            margin: 24px 0;
+            flex-direction: column;
             align-items: center;
+            gap: 16px;
+            margin: 24px 0;
         }
         .chart-container {
-            flex: 0 0 220px;
-            height: 220px;
+            width: 280px;
+            height: 280px;
             position: relative;
         }
         canvas {
             width: 100%;
             height: 100%;
             display: block;
+            background: transparent;
         }
-        .legend {
-            flex: 1;
-            min-width: 200px;
+        .legend-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 32px;
+            margin: 16px 0 8px;
+            width: 100%;
         }
         .legend-item {
             display: flex;
             align-items: center;
-            gap: 12px;
-            margin: 12px 0;
-            font-size: 1.1rem;
+            gap: 10px;
+            font-size: 1.2rem;
+            background: #f0f4fa;
+            padding: 8px 22px;
+            border-radius: 60px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
         }
-        .legend-color {
-            width: 32px;
-            height: 20px;
-            border-radius: 20px;
+        .legend-dot {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         }
-        .stat-number {
+        .legend-text {
+            font-weight: 600;
+            color: #1e2b3c;
+        }
+        .legend-percent {
             font-weight: 700;
+            margin-left: 4px;
             color: #0a2647;
+        }
+        .total-badge {
+            background: #e9ecf0;
+            padding: 8px 24px;
+            border-radius: 40px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1e3c5f;
         }
         .question-container {
             background: #ffffff;
@@ -214,7 +236,6 @@
             font-size: 1rem;
             font-weight: 500;
         }
-        /* 进度条 */
         .progress-container {
             margin: 20px 0 10px;
             height: 24px;
@@ -254,7 +275,9 @@
         @media (max-width: 600px) {
             .btn { padding: 12px 18px; }
             .option { padding: 14px; }
-            .chart-container { flex: 0 0 180px; height: 180px; }
+            .chart-container { width: 220px; height: 220px; }
+            .legend-item { font-size: 1rem; padding: 6px 16px; }
+            .legend-dot { width: 20px; height: 20px; }
         }
     </style>
 </head>
@@ -270,16 +293,27 @@
             <div id="jsonStatus" class="status-message" style="margin-top:10px;">等待上传JSON文件...</div>
         </div>
 
-        <!-- 同心圆图 + 图例 -->
+        <!-- 高清同心圆 + 灵动图例 -->
         <div class="stats-row">
             <div class="chart-container">
-                <canvas id="overviewChart" width="200" height="200"></canvas>
+                <canvas id="overviewChart" width="1024" height="1024"></canvas>
             </div>
-            <div class="legend">
-                <div class="legend-item"><span class="legend-color" style="background:#162241;"></span> A类正确率 <span class="stat-number" id="aPercent">0%</span></div>
-                <div class="legend-item"><span class="legend-color" style="background:#395d43;"></span> B类正确率 <span class="stat-number" id="bPercent">0%</span></div>
-                <div class="legend-item"><span class="legend-color" style="background:#8c3232;"></span> C类正确率 <span class="stat-number" id="cPercent">0%</span></div>
-                <div class="legend-item"><span class="legend-color" style="background:#1e3c5f; opacity:0.5;"></span> 总体正确率 <span class="stat-number" id="totalPercent">0%</span></div>
+            <div class="legend-row">
+                <div class="legend-item">
+                    <span class="legend-dot" style="background:#0000cc;"></span>
+                    <span class="legend-text">A类 <span class="legend-percent" id="aPercent">0%</span></span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-dot" style="background:#00cc00;"></span>
+                    <span class="legend-text">B类 <span class="legend-percent" id="bPercent">0%</span></span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-dot" style="background:#cc0000;"></span>
+                    <span class="legend-text">C类 <span class="legend-percent" id="cPercent">0%</span></span>
+                </div>
+            </div>
+            <div class="total-badge">
+                🌟 总体正确率 <span id="totalPercent">0%</span>
             </div>
         </div>
 
@@ -421,27 +455,29 @@
         drawChart(aRate, bRate, cRate);
     }
 
-    // 绘制同心圆环图 (调整半径确保完整显示)
+    // 绘制高清同心圆图 (1024x1024)
     function drawChart(aPer, bPer, cPer) {
-        ctx.clearRect(0, 0, 200, 200);
-        const centerX = 100, centerY = 100;
-        // 半径设置：内圈30，中圈55，外圈80，线宽12，外圈半径80+6=86 < 100，完整显示
-        const radius = [30, 55, 80];
-        // 颜色顺序：A蓝(#162241), B绿(#395d43), C红(#8c3232)
-        const colors = ['#162241', '#395d43', '#8c3232'];
+        ctx.clearRect(0, 0, 1024, 1024);
+        const centerX = 512, centerY = 512;
+        // 半径：内圈200，中圈360，外圈520 (留出边距)
+        const radius = [200, 360, 520];
+        // 纯色：蓝(#0000cc), 绿(#00cc00), 红(#cc0000)
+        const colors = ['#0000cc', '#00cc00', '#cc0000'];
+        // 浅色背景：浅蓝(#ccccff), 浅绿(#ccffcc), 浅红(#ffcccc)
+        const bgColors = ['#ccccff', '#ccffcc', '#ffcccc'];
         const percents = [aPer/100, bPer/100, cPer/100];
-        const lineWidth = 15; // 线宽适中
+        const lineWidth = 80; // 线宽80，半径200线宽80，内圈从160到240，不会重叠
 
-        // 绘制背景圆环（浅灰色）
+        // 绘制背景圆环（浅色）
         for (let i = 0; i < 3; i++) {
             ctx.beginPath();
             ctx.arc(centerX, centerY, radius[i], 0, 2 * Math.PI);
-            ctx.strokeStyle = '#e9ecf0';
+            ctx.strokeStyle = bgColors[i];
             ctx.lineWidth = lineWidth;
             ctx.stroke();
         }
 
-        // 绘制进度圆环（按百分比）
+        // 绘制前景圆环（按百分比）
         for (let i = 0; i < 3; i++) {
             if (percents[i] > 0) {
                 ctx.beginPath();
