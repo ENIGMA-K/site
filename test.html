@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>业余无线电·答题训练 (高清同心圆·灵动图例)</title>
+    <title>业余无线电·答题训练 (3:1布局·精确百分比)</title>
     <style>
         * {
             box-sizing: border-box;
@@ -88,66 +88,103 @@
             border: 2px dashed #a0b8cc;
             margin: 8px 0 16px;
         }
-        /* 总览统计卡片 - 灵动图例 */
-        .stats-row {
+
+        /* 总览新布局：3:1 区域 */
+        .overview-stats {
             display: flex;
-            flex-direction: column;
             align-items: center;
-            gap: 16px;
+            gap: 20px;
             margin: 24px 0;
+            min-height: 220px; /* 适应小屏 */
         }
-        .chart-container {
-            width: 280px;
-            height: 280px;
+        .chart-side {
+            flex: 0 0 30%; /* 左侧约占1/3 */
+            max-width: 220px; /* 限制最大宽度 */
+        }
+        .chart-wrapper {
+            width: 100%;
             position: relative;
+            padding-bottom: 100%; /* 1:1 比例 */
         }
-        canvas {
+        .chart-wrapper canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
             display: block;
             background: transparent;
         }
-        .legend-row {
+        .stats-side {
+            flex: 1; /* 右侧占剩余空间 */
             display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .top-categories {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
             flex-wrap: wrap;
-            justify-content: center;
-            gap: 32px;
-            margin: 16px 0 8px;
-            width: 100%;
         }
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 1.2rem;
-            background: #f0f4fa;
-            padding: 8px 22px;
-            border-radius: 60px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-        }
-        .legend-dot {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-        }
-        .legend-text {
+        .cat-item {
+            flex: 1;
+            min-width: 80px;
+            text-align: center;
+            padding: 16px 8px;
+            border-radius: 24px;
             font-weight: 600;
-            color: #1e2b3c;
+            font-size: 1.2rem;
+            color: white;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
         }
-        .legend-percent {
+        .cat-a { background: #0000cc; }
+        .cat-b { background: #00cc00; }
+        .cat-c { background: #cc0000; }
+        .cat-percent {
+            font-size: 1.6rem;
             font-weight: 700;
-            margin-left: 4px;
-            color: #0a2647;
+            line-height: 1.2;
         }
-        .total-badge {
-            background: #e9ecf0;
-            padding: 8px 24px;
+        .bottom-total {
+            background: #eef3f9;
             border-radius: 40px;
-            font-size: 1.1rem;
+            padding: 20px 16px;
+            text-align: center;
+            font-size: 1.4rem;
             font-weight: 600;
             color: #1e3c5f;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: center;
+            align-items: baseline;
+            gap: 12px;
+            flex-wrap: wrap;
         }
+        .total-number {
+            font-size: 2.2rem;
+            color: #0a2647;
+            margin-left: 8px;
+        }
+        @media (max-width: 600px) {
+            .overview-stats {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .chart-side {
+                flex: none;
+                max-width: 200px;
+                margin: 0 auto;
+            }
+            .cat-item { font-size: 1rem; padding: 12px 4px; }
+            .cat-percent { font-size: 1.3rem; }
+            .bottom-total { font-size: 1.2rem; }
+            .total-number { font-size: 1.8rem; }
+        }
+
         .question-container {
             background: #ffffff;
             border-radius: 32px;
@@ -272,19 +309,12 @@
             margin-top: 20px;
             text-align: center;
         }
-        @media (max-width: 600px) {
-            .btn { padding: 12px 18px; }
-            .option { padding: 14px; }
-            .chart-container { width: 220px; height: 220px; }
-            .legend-item { font-size: 1rem; padding: 6px 16px; }
-            .legend-dot { width: 20px; height: 20px; }
-        }
     </style>
 </head>
 <body>
 <div class="app-container" id="appContainer">
 
-    <!-- 总览界面 -->
+    <!-- 总览界面 (新布局) -->
     <div id="overviewPage" class="page">
         <h2>📊 训练总览</h2>
         <div class="file-zone">
@@ -293,27 +323,34 @@
             <div id="jsonStatus" class="status-message" style="margin-top:10px;">等待上传JSON文件...</div>
         </div>
 
-        <!-- 高清同心圆 + 灵动图例 -->
-        <div class="stats-row">
-            <div class="chart-container">
-                <canvas id="overviewChart" width="1024" height="1024"></canvas>
-            </div>
-            <div class="legend-row">
-                <div class="legend-item">
-                    <span class="legend-dot" style="background:#0000cc;"></span>
-                    <span class="legend-text">A类 <span class="legend-percent" id="aPercent">0%</span></span>
-                </div>
-                <div class="legend-item">
-                    <span class="legend-dot" style="background:#00cc00;"></span>
-                    <span class="legend-text">B类 <span class="legend-percent" id="bPercent">0%</span></span>
-                </div>
-                <div class="legend-item">
-                    <span class="legend-dot" style="background:#cc0000;"></span>
-                    <span class="legend-text">C类 <span class="legend-percent" id="cPercent">0%</span></span>
+        <!-- 3:1 统计区域 -->
+        <div class="overview-stats">
+            <!-- 左侧同心圆 -->
+            <div class="chart-side">
+                <div class="chart-wrapper">
+                    <canvas id="overviewChart" width="1024" height="1024"></canvas>
                 </div>
             </div>
-            <div class="total-badge">
-                🌟 总体正确率 <span id="totalPercent">0%</span>
+            <!-- 右侧数据 -->
+            <div class="stats-side">
+                <div class="top-categories">
+                    <div class="cat-item cat-a">
+                        <span>A类</span>
+                        <span class="cat-percent" id="aPercent">0.00%</span>
+                    </div>
+                    <div class="cat-item cat-b">
+                        <span>B类</span>
+                        <span class="cat-percent" id="bPercent">0.00%</span>
+                    </div>
+                    <div class="cat-item cat-c">
+                        <span>C类</span>
+                        <span class="cat-percent" id="cPercent">0.00%</span>
+                    </div>
+                </div>
+                <div class="bottom-total">
+                    <span>总体正确率</span>
+                    <span class="total-number" id="totalPercent">0.00%</span>
+                </div>
             </div>
         </div>
 
@@ -328,7 +365,7 @@
         <p style="color:#2b4f6e;">选择类别后进入答题，已熟练掌握的题目不再出现。</p>
     </div>
 
-    <!-- 答题界面 -->
+    <!-- 答题界面 (不变) -->
     <div id="quizPage" class="page hidden">
         <div class="flex-row" style="margin-bottom: 8px;">
             <h3 style="margin:0;">📝 答题中 · <span id="quizCategory">A类</span></h3>
@@ -406,7 +443,7 @@
     const questionTypeSpan = document.getElementById('questionType');
     const jsonStatus = document.getElementById('jsonStatus');
 
-    // 统计显示
+    // 统计显示 (新元素)
     const totalPercentEl = document.getElementById('totalPercent');
     const aPercentEl = document.getElementById('aPercent');
     const bPercentEl = document.getElementById('bPercent');
@@ -422,10 +459,10 @@
     // ---------- 辅助函数 ----------
     function updateStats() {
         if (allQuestions.length === 0) {
-            totalPercentEl.innerText = '0%';
-            aPercentEl.innerText = '0%';
-            bPercentEl.innerText = '0%';
-            cPercentEl.innerText = '0%';
+            totalPercentEl.innerText = '0.00%';
+            aPercentEl.innerText = '0.00%';
+            bPercentEl.innerText = '0.00%';
+            cPercentEl.innerText = '0.00%';
             drawChart(0,0,0);
             return;
         }
@@ -442,31 +479,31 @@
             if (q.C类 == 1) { cRight += right; cAttempt += att; }
         });
 
-        const totalRate = totalAttempt ? Math.round(100 * totalRight / totalAttempt) : 0;
-        const aRate = aAttempt ? Math.round(100 * aRight / aAttempt) : 0;
-        const bRate = bAttempt ? Math.round(100 * bRight / bAttempt) : 0;
-        const cRate = cAttempt ? Math.round(100 * cRight / cAttempt) : 0;
+        const totalRate = totalAttempt ? (100 * totalRight / totalAttempt) : 0;
+        const aRate = aAttempt ? (100 * aRight / aAttempt) : 0;
+        const bRate = bAttempt ? (100 * bRight / bAttempt) : 0;
+        const cRate = cAttempt ? (100 * cRight / cAttempt) : 0;
 
-        totalPercentEl.innerText = totalRate + '%';
-        aPercentEl.innerText = aRate + '%';
-        bPercentEl.innerText = bRate + '%';
-        cPercentEl.innerText = cRate + '%';
+        totalPercentEl.innerText = totalRate.toFixed(2) + '%';
+        aPercentEl.innerText = aRate.toFixed(2) + '%';
+        bPercentEl.innerText = bRate.toFixed(2) + '%';
+        cPercentEl.innerText = cRate.toFixed(2) + '%';
 
         drawChart(aRate, bRate, cRate);
     }
 
-    // 绘制高清同心圆图 (1024x1024)
+    // 绘制高清同心圆图 (1024x1024) 使用新配色
     function drawChart(aPer, bPer, cPer) {
         ctx.clearRect(0, 0, 1024, 1024);
         const centerX = 512, centerY = 512;
-        // 半径：内圈200，中圈360，外圈520 (留出边距)
+        // 半径：内圈200，中圈360，外圈520 (线宽80，间隔适中)
         const radius = [200, 360, 520];
         // 纯色：蓝(#0000cc), 绿(#00cc00), 红(#cc0000)
         const colors = ['#0000cc', '#00cc00', '#cc0000'];
         // 浅色背景：浅蓝(#ccccff), 浅绿(#ccffcc), 浅红(#ffcccc)
         const bgColors = ['#ccccff', '#ccffcc', '#ffcccc'];
         const percents = [aPer/100, bPer/100, cPer/100];
-        const lineWidth = 80; // 线宽80，半径200线宽80，内圈从160到240，不会重叠
+        const lineWidth = 80;
 
         // 绘制背景圆环（浅色）
         for (let i = 0; i < 3; i++) {
@@ -655,7 +692,7 @@
 
         const att = q.答题次数 || 0;
         const right = q.正确积分 || 0;
-        const rate = att ? Math.round(100 * right / att) : 0;
+        const rate = att ? (100 * right / att).toFixed(2) : 0;
         singleRateSpan.innerText = `正确率 ${rate}% (${right}/${att})`;
 
         document.querySelectorAll('.option').forEach(opt => {
@@ -702,7 +739,7 @@
         // 刷新单题正确率
         const att = q.答题次数;
         const right = q.正确积分;
-        const rate = att ? Math.round(100 * right / att) : 0;
+        const rate = att ? (100 * right / att).toFixed(2) : 0;
         singleRateSpan.innerText = `正确率 ${rate}% (${right}/${att})`;
 
         // 更新统计和进度条
