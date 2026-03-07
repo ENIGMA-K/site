@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>业余无线电·答题训练 (进阶版)</title>
+    <title>业余无线电·答题训练 (进阶版·配色优化)</title>
     <style>
         * {
             box-sizing: border-box;
@@ -276,9 +276,9 @@
                 <canvas id="overviewChart" width="200" height="200"></canvas>
             </div>
             <div class="legend">
-                <div class="legend-item"><span class="legend-color" style="background:#1e3c5f;"></span> A类正确率 <span class="stat-number" id="aPercent">0%</span></div>
-                <div class="legend-item"><span class="legend-color" style="background:#ffa940;"></span> B类正确率 <span class="stat-number" id="bPercent">0%</span></div>
-                <div class="legend-item"><span class="legend-color" style="background:#52c41a;"></span> C类正确率 <span class="stat-number" id="cPercent">0%</span></div>
+                <div class="legend-item"><span class="legend-color" style="background:#162241;"></span> A类正确率 <span class="stat-number" id="aPercent">0%</span></div>
+                <div class="legend-item"><span class="legend-color" style="background:#395d43;"></span> B类正确率 <span class="stat-number" id="bPercent">0%</span></div>
+                <div class="legend-item"><span class="legend-color" style="background:#8c3232;"></span> C类正确率 <span class="stat-number" id="cPercent">0%</span></div>
                 <div class="legend-item"><span class="legend-color" style="background:#1e3c5f; opacity:0.5;"></span> 总体正确率 <span class="stat-number" id="totalPercent">0%</span></div>
             </div>
         </div>
@@ -421,16 +421,18 @@
         drawChart(aRate, bRate, cRate);
     }
 
-    // 绘制同心圆环图
+    // 绘制同心圆环图 (调整半径确保完整显示)
     function drawChart(aPer, bPer, cPer) {
         ctx.clearRect(0, 0, 200, 200);
         const centerX = 100, centerY = 100;
-        const radius = [40, 70, 100]; // A内, B中, C外
-        const colors = ['#1e3c5f', '#ffa940', '#52c41a'];
+        // 半径设置：内圈30，中圈55，外圈80，线宽12，外圈半径80+6=86 < 100，完整显示
+        const radius = [30, 55, 80];
+        // 颜色顺序：A蓝(#162241), B绿(#395d43), C红(#8c3232)
+        const colors = ['#162241', '#395d43', '#8c3232'];
         const percents = [aPer/100, bPer/100, cPer/100];
-        const lineWidth = 18;
+        const lineWidth = 15; // 线宽适中
 
-        // 绘制背景圆环
+        // 绘制背景圆环（浅灰色）
         for (let i = 0; i < 3; i++) {
             ctx.beginPath();
             ctx.arc(centerX, centerY, radius[i], 0, 2 * Math.PI);
@@ -439,7 +441,7 @@
             ctx.stroke();
         }
 
-        // 绘制进度圆环
+        // 绘制进度圆环（按百分比）
         for (let i = 0; i < 3; i++) {
             if (percents[i] > 0) {
                 ctx.beginPath();
