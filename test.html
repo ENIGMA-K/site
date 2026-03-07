@@ -95,11 +95,11 @@
             align-items: center;
             gap: 20px;
             margin: 24px 0;
-            min-height: 220px; /* 适应小屏 */
+            min-height: 220px;
         }
         .chart-side {
-            flex: 0 0 30%; /* 左侧约占1/3 */
-            max-width: 220px; /* 限制最大宽度 */
+            flex: 0 0 30%;
+            max-width: 220px;
         }
         .chart-wrapper {
             width: 100%;
@@ -116,7 +116,7 @@
             background: transparent;
         }
         .stats-side {
-            flex: 1; /* 右侧占剩余空间 */
+            flex: 1;
             display: flex;
             flex-direction: column;
             gap: 20px;
@@ -135,19 +135,20 @@
             border-radius: 24px;
             font-weight: 600;
             font-size: 1.2rem;
-            color: white;
+            color: #1e2b3c; /* 深色文字 */
             box-shadow: 0 6px 12px rgba(0,0,0,0.1);
             display: flex;
             flex-direction: column;
             gap: 6px;
         }
-        .cat-a { background: #0000cc; }
-        .cat-b { background: #00cc00; }
-        .cat-c { background: #cc0000; }
+        .cat-a { background: #ccccff; } /* 浅蓝 */
+        .cat-b { background: #ccffcc; } /* 浅绿 */
+        .cat-c { background: #ffcccc; } /* 浅红 */
         .cat-percent {
             font-size: 1.6rem;
             font-weight: 700;
             line-height: 1.2;
+            color: #000; /* 纯黑数字更清晰 */
         }
         .bottom-total {
             background: #eef3f9;
@@ -443,7 +444,7 @@
     const questionTypeSpan = document.getElementById('questionType');
     const jsonStatus = document.getElementById('jsonStatus');
 
-    // 统计显示 (新元素)
+    // 统计显示
     const totalPercentEl = document.getElementById('totalPercent');
     const aPercentEl = document.getElementById('aPercent');
     const bPercentEl = document.getElementById('bPercent');
@@ -492,18 +493,18 @@
         drawChart(aRate, bRate, cRate);
     }
 
-    // 绘制高清同心圆图 (1024x1024) 使用新配色
+    // 绘制高清同心圆图 (紧凑版)
     function drawChart(aPer, bPer, cPer) {
         ctx.clearRect(0, 0, 1024, 1024);
         const centerX = 512, centerY = 512;
-        // 半径：内圈200，中圈360，外圈520 (线宽80，间隔适中)
-        const radius = [200, 360, 520];
+        // 半径调整：内圈200，中圈300，外圈400 (线宽60，外边缘400+30=430，完全在512内)
+        const radius = [200, 300, 400];
         // 纯色：蓝(#0000cc), 绿(#00cc00), 红(#cc0000)
         const colors = ['#0000cc', '#00cc00', '#cc0000'];
         // 浅色背景：浅蓝(#ccccff), 浅绿(#ccffcc), 浅红(#ffcccc)
         const bgColors = ['#ccccff', '#ccffcc', '#ffcccc'];
         const percents = [aPer/100, bPer/100, cPer/100];
-        const lineWidth = 80;
+        const lineWidth = 60; // 线宽60，使圆环更紧凑
 
         // 绘制背景圆环（浅色）
         for (let i = 0; i < 3; i++) {
