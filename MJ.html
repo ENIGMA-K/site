@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📝 立直麻将·命令行分析器 (左右布局/中文向听)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Courier New', monospace;
+        }
+        body {
+            background: #1e3a2f;
+            min-height: 100vh;
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .console-container {
+            max-width: 1400px;
+            width: 100%;
+            background: #ebe4d3;
+            border-radius: 32px;
+            box-shadow: 0 20px 30px rgba(0,0,0,0.7);
+            padding: 24px;
+            border: 4px solid #b4946a;
+        }
+        h1 {
+            margin: 0 0 16px 0;
+            color: #283f2b;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            font-size: 2rem;
+            grid-column: 1 / -1;
+        }
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+        /* 左侧样式 */
+        .left-panel {
+            background: #dacfb6;
+            border-radius: 28px;
+            padding: 20px;
+            box-shadow: inset 0 2px 8px #aa9f86;
+        }
+        .status-panels {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        .panel {
+            background: #efe3cd;
+            border-radius: 20px;
+            padding: 16px;
+            box-shadow: inset 0 2px 5px #ac9b80;
+        }
+        .panel h3 {
+            margin: 0 0 12px 0;
+            color: #3d2f19;
+            border-left: 8px solid #a65336;
+            padding-left: 12px;
+        }
+        .tile-list {
+            font-size: 1.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 10px;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+        .tile-item {
+            background: #f8f0da;
+            border: 2px solid #7c6342;
+            border-radius: 18px;
+            padding: 4px 12px;
+            font-weight: bold;
+            color: #1f3d3a;
+        }
+        .revealed-group {
+            background: #b8a88b;
+            border-radius: 28px;
+            padding: 8px 16px;
+            margin: 6px 0;
+            font-size: 1.4rem;
+        }
+        .command-line {
+            display: flex;
+            gap: 12px;
+            margin: 20px 0 10px;
+            align-items: center;
+        }
+        #commandInput {
+            flex: 3;
+            background: #2f2f1f;
+            border: 4px solid #ab8b50;
+            border-radius: 60px;
+            padding: 16px 20px;
+            font-size: 1.2rem;
+            color: #f0e6b0;
+            font-family: 'Courier New', monospace;
+            outline: none;
+        }
+        #execBtn {
+            background: #7d613b;
+            border: none;
+            border-radius: 60px;
+            padding: 16px 28px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #faf0c0;
+            box-shadow: 0 7px 0 #4d3c28;
+            cursor: pointer;
+            transition: 0.05s linear;
+        }
+        #execBtn:active {
+            transform: translateY(5px);
+            box-shadow: 0 2px 0 #4d3c28;
+        }
+        .helper {
+            background: #b9a481;
+            border-radius: 32px;
+            padding: 14px 18px;
+            font-size: 1.0rem;
+            color: #1a2c1e;
+            margin-top: 16px;
+        }
+        /* 右侧样式 */
+        .right-panel {
+            background: #dacfb6;
+            border-radius: 28px;
+            padding: 20px;
+            box-shadow: inset 0 2px 8px #aa9f86;
+            display: flex;
+            flex-direction: column;
+        }
+        .shanten-area {
+            background: #bfaa82;
+            border-radius: 24px;
+            padding: 16px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .shanten-badge {
+            background: #1d4a3a;
+            padding: 16px 24px;
+            border-radius: 60px;
+            color: #efdda0;
+            font-size: 2.8rem;
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 8px;
+        }
+        .phase-text {
+            font-size: 1.5rem;
+            color: #2d411d;
+        }
+        .advance-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #c7bb9f;
+            border-radius: 20px;
+            overflow: hidden;
+            flex: 1;
+        }
+        .advance-table th {
+            background: #5f4f33;
+            color: #ffefc0;
+            padding: 12px;
+            font-size: 1.2rem;
+        }
+        .advance-table td {
+            background: #ece2ca;
+            padding: 12px;
+            border-bottom: 1px solid #aa946b;
+            vertical-align: top;
+        }
+        .advance-tiles {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .mini-tile {
+            background: #f3e3b0;
+            border-radius: 20px;
+            padding: 4px 10px;
+            border: 1px solid #7d5d35;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .warning {
+            color: #a13d2b;
+            font-weight: bold;
+        }
+        .footer-note {
+            margin-top: 20px;
+            color: #3f4d34;
+            grid-column: 1 / -1;
+        }
+        /* 牌池表格紧凑样式 */
+        .pool-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #ddd2b8;
+            border-radius: 12px;
+            overflow: hidden;
+            font-size: 0.9rem;
+        }
+        .pool-table th {
+            background: #9b855a;
+            color: #2d2d1a;
+            padding: 4px;
+            font-weight: 600;
+            text-align: center;
+        }
+        .pool-table td {
+            border: 1px solid #b7a179;
+            text-align: center;
+            padding: 4px;
+            background: #f2e8d2;
+        }
+        .pool-table .suit-header {
+            background: #b09f7c;
+            font-weight: bold;
+            color: #1f2c0a;
+        }
+    </style>
+</head>
+<body>
+<div class="console-container">
+    <h1>🀫 立直·CLI 分析器 <span style="font-size: 1.2rem; background:#2f543b; padding:6px 20px; border-radius:40px; color:#efe6b0;">多命令(空格分隔)｜r删多张｜c/b/k均从手牌取</span></h1>
+
+    <div class="main-grid">
+        <!-- 左侧：命令输入与状态 -->
+        <div class="left-panel">
+            <div class="status-panels">
+                <div class="panel">
+                    <h3>🀆 暗牌 (手中)</h3>
+                    <div id="handDisplay" class="tile-list">-</div>
+                </div>
+                <div class="panel">
+                    <h3>🀁 副露 (明牌)</h3>
+                    <div id="revealedDisplay" class="tile-list">-</div>
+                </div>
+                <div class="panel">
+                    <h3>⛰️ 牌池剩余</h3>
+                    <div id="remainingDisplay" style="overflow-x: auto;">
+                        <!-- 动态生成4行9列表格 -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="command-line">
+                <input type="text" id="commandInput" placeholder="多个命令用空格分隔，例如: hm123p333s22567z111 rm5 im5 dm9" value="hm123p333s22567z111">
+                <button id="execBtn">⏎ 执行</button>
+            </div>
+            <div class="helper">
+                <strong>📌 命令格式 (无空格，多个命令以空格分隔)：</strong><br>
+                • <code>h&lt;花色&gt;&lt;数字串&gt;...</code> 输入手牌 (覆盖)<br>
+                • <code>reset</code> 重置<br>
+                • <code>r&lt;花色&gt;&lt;多位数字&gt;</code> 牌池减少多张 (例: rs234)<br>
+                • <code>i&lt;花色&gt;&lt;数字&gt;</code> 摸牌 (例: im5)<br>
+                • <code>d&lt;花色&gt;&lt;数字&gt;</code> 打牌 (例: dm5)<br>
+                • <code>b&lt;花色&gt;&lt;数字&gt;</code> 碰 (需手牌3张)<br>
+                • <code>k&lt;花色&gt;&lt;数字&gt;</code> 暗杠 (需手牌4张)<br>
+                • <code>c&lt;花色&gt;&lt;三连数字&gt;</code> 吃 (需手牌有此顺子)<br>
+                <span style="color:#4f3f1f;">🔄 花色: m/p/s/z, 字牌z:1东2南3西4北5白6发7中</span>
+            </div>
+        </div>
+
+        <!-- 右侧：向听与进张分析 -->
+        <div class="right-panel">
+            <div class="shanten-area">
+                <div class="shanten-badge" id="shantenDisplay">?</div>
+                <div class="phase-text" id="phaseText">⚙️ 摸牌前</div>
+            </div>
+            <table class="advance-table">
+                <thead><tr><th>分析</th><th>结果</th></tr></thead>
+                <tbody id="analysisBody">
+                    <tr><td colspan="2">执行命令后显示分析</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="footer-note">※ 向听计算含一般·七对·国士，副露后仅一般形。牌池表格中数字表示剩余张数。</div>
+</div>
+
+<script>
+(function() {
+    // ---------- 牌表：字母+数字格式 ----------
+    const ID_TO_TILE = [];
+    for (let i=1; i<=9; i++) ID_TO_TILE.push(`m${i}`);
+    for (let i=1; i<=9; i++) ID_TO_TILE.push(`p${i}`);
+    for (let i=1; i<=9; i++) ID_TO_TILE.push(`s${i}`);
+    for (let i=1; i<=7; i++) ID_TO_TILE.push(`z${i}`);
+
+    const TILE_TO_ID = {};
+    ID_TO_TILE.forEach((name, idx) => { TILE_TO_ID[name] = idx; });
+
+    // 国士无双幺九牌索引
+    const YAOCHU_INDICES = [0,8,9,17,18,26,27,28,29,30,31,32,33];
+
+    // ---------- 全局状态 ----------
+    let hand = new Array(34).fill(0);
+    let revealed = [];                         // 副露数组 {type, tiles: [id,...]}
+    let remaining = new Array(34).fill(4);      // 牌池剩余
+
+    // ---------- 辅助函数 ----------
+    function totalHand() {
+        return hand.reduce((a,b)=>a+b,0);
+    }
+
+    function suitBase(s) {
+        s = s.toLowerCase();
+        if (s === 'm') return 0;
+        if (s === 'p') return 9;
+        if (s === 's') return 18;
+        if (s === 'z') return 27;
+        return -1;
+    }
+
+    function getTileId(suit, numStr) {
+        let num = parseInt(numStr);
+        if (isNaN(num) || num < 1) return -1;
+        let base = suitBase(suit);
+        if (base === -1) return -1;
+        if (suit === 'z' && (num < 1 || num > 7)) return -1;
+        if (suit !== 'z' && (num < 1 || num > 9)) return -1;
+        return base + num - 1;
+    }
+
+    // 中文向听显示
+    function shantenToChinese(sh) {
+        if (sh === -1) return '胡牌';
+        if (sh === 0) return '听牌';
+        if (sh === 1) return '一向听';
+        if (sh === 2) return '二向听';
+        if (sh === 3) return '三向听';
+        if (sh === 4) return '四向听';
+        if (sh === 5) return '五向听';
+        if (sh === 6) return '六向听';
+        if (sh === 7) return '七向听';
+        if (sh === 8) return '八向听';
+        return sh + '?';
+    }
+
+    // ---------- 更新UI (含牌池表格) ----------
+    function updateUI() {
+        // 暗牌
+        let handHtml = [];
+        for (let i=0; i<34; i++) {
+            if (hand[i] > 0) {
+                let cnt = hand[i];
+                handHtml.push(`<span class="tile-item">${ID_TO_TILE[i]}${cnt>1?'×'+cnt:''}</span>`);
+            }
+        }
+        document.getElementById('handDisplay').innerHTML = handHtml.join('') || '无';
+
+        // 副露
+        let revHtml = '';
+        revealed.forEach(g => {
+            let tileNames = g.tiles.map(id => ID_TO_TILE[id]).join('');
+            revHtml += `<div class="revealed-group">【${g.type==='pon'?'碰':g.type==='kan'?'杠':'吃'}】${tileNames}</div>`;
+        });
+        document.getElementById('revealedDisplay').innerHTML = revHtml || '无';
+
+        // 牌池剩余表格 (4行×9列)
+        let remainingHtml = '<table class="pool-table">';
+        // 表头：数字1-9
+        remainingHtml += '<tr><th></th>';
+        for (let i=1; i<=9; i++) remainingHtml += `<th>${i}</th>`;
+        remainingHtml += '</tr>';
+
+        const suits = ['m', 'p', 's', 'z'];
+        suits.forEach(suit => {
+            remainingHtml += '<tr>';
+            remainingHtml += `<td class="suit-header">${suit.toUpperCase()}</td>`;
+            let base = suitBase(suit);
+            let max = (suit === 'z') ? 7 : 9;
+            for (let i=1; i<=9; i++) {
+                if (i <= max) {
+                    let id = base + i - 1;
+                    remainingHtml += `<td>${remaining[id]}</td>`;
+                } else {
+                    remainingHtml += `<td>-</td>`; // 字牌后面两列空白
+                }
+            }
+            remainingHtml += '</tr>';
+        });
+        remainingHtml += '</table>';
+        document.getElementById('remainingDisplay').innerHTML = remainingHtml;
+
+        // 计算向听
+        let shanten = computeShanten(hand, revealed);
+        document.getElementById('shantenDisplay').innerText = shantenToChinese(shanten);
+
+        let handCount = totalHand();
+        let phase = (handCount % 3 === 1) ? '摸牌前' : ((handCount % 3 === 2) ? '摸牌后' : '特殊手牌数');
+        document.getElementById('phaseText').innerHTML = `⚙️ ${phase} (手牌${handCount}张)`;
+
+        generateAnalysis(shanten, handCount);
+    }
+
+    // ---------- 向听计算 (与之前相同) ----------
+    function computeShanten(handArr, revealedArr) {
+        if (totalHand() > 14) return 99;
+        let mianziCount = revealedArr.length;
+        let sNormal = shantenNormalWithMianzi(handArr, mianziCount);
+        if (revealedArr.length > 0) return sNormal;
+        let sChitoi = shantenChitoi(handArr);
+        let sKoku = shantenKokushi(handArr);
+        return Math.min(sNormal, sChitoi, sKoku);
+    }
+
+    function shantenNormalWithMianzi(handArr, mianziCount) {
+        let maxMen = 0;
+        function dfs(handCopy, start, formed) {
+            if (formed > maxMen) maxMen = formed;
+            if (formed >= 4 - mianziCount) return;
+            for (let i = start; i < 34; i++) {
+                if (handCopy[i] <= 0) continue;
+                if (handCopy[i] >= 3) {
+                    handCopy[i] -= 3;
+                    dfs(handCopy, i, formed + 1);
+                    handCopy[i] += 3;
+                }
+                if (i < 27) {
+                    const suitStart = Math.floor(i/9)*9;
+                    if (i+2 <= suitStart+8 && handCopy[i]>=1 && handCopy[i+1]>=1 && handCopy[i+2]>=1) {
+                        handCopy[i]--; handCopy[i+1]--; handCopy[i+2]--;
+                        dfs(handCopy, i, formed + 1);
+                        handCopy[i]++; handCopy[i+1]++; handCopy[i+2]++;
+                    }
+                }
+            }
+        }
+        dfs(handArr.slice(), 0, 0);
+        let menCount = mianziCount + maxMen;
+
+        function countMaxTatsu(handCopy, limit) {
+            let best = 0;
+            function bt(pos, count) {
+                if (count > best) best = count;
+                if (count >= limit) return;
+                for (let i = pos; i < 34; i++) {
+                    if (handCopy[i] <= 0) continue;
+                    if (handCopy[i] >= 2) {
+                        handCopy[i] -= 2;
+                        bt(i, count + 1);
+                        handCopy[i] += 2;
+                    }
+                    if (i < 27) {
+                        let s = Math.floor(i/9)*9;
+                        if (i+1 <= s+8 && handCopy[i]>=1 && handCopy[i+1]>=1) {
+                            handCopy[i]--; handCopy[i+1]--;
+                            bt(i, count + 1);
+                            handCopy[i]++; handCopy[i+1]++;
+                        }
+                        if (i+2 <= s+8 && handCopy[i]>=1 && handCopy[i+2]>=1) {
+                            handCopy[i]--; handCopy[i+2]--;
+                            bt(i, count + 1);
+                            handCopy[i]++; handCopy[i+2]++;
+                        }
+                    }
+                }
+            }
+            bt(0, 0);
+            return best;
+        }
+
+        let needHead = 1;
+        let tatsuMax = countMaxTatsu(handArr.slice(), 4 - menCount + needHead);
+        let effectiveTatsu = Math.min(tatsuMax, 4 - menCount);
+        let bestShanten = 8 - 2*menCount - (needHead?0:1) - effectiveTatsu;
+
+        for (let i=0; i<34; i++) {
+            if (handArr[i] >= 2) {
+                let newHand = handArr.slice();
+                newHand[i] -= 2;
+                let tatsu = countMaxTatsu(newHand, 4 - menCount);
+                let eff = Math.min(tatsu, 4 - menCount);
+                let s = 8 - 2*menCount - 1 - eff;
+                if (s < bestShanten) bestShanten = s;
+            }
+        }
+        return bestShanten < -1 ? -1 : bestShanten;
+    }
+
+    function shantenChitoi(handArr) {
+        let pairs = 0, singles = 0;
+        for (let i=0; i<34; i++) {
+            let c = handArr[i];
+            if (c >= 2) pairs++;
+            singles += (c >= 2) ? (c-2) : c;
+        }
+        let sh = 6 - pairs + singles;
+        if (pairs === 6 && singles === 1) return 0;
+        if (pairs === 7 && singles === 0) return -1;
+        return sh < -1 ? -1 : sh;
+    }
+
+    function shantenKokushi(handArr) {
+        let kinds = 0, hasPair = 0;
+        for (let idx of YAOCHU_INDICES) {
+            if (handArr[idx] >= 1) kinds++;
+            if (handArr[idx] >= 2) hasPair = 1;
+        }
+        let other = totalHand() - YAOCHU_INDICES.reduce((acc, i) => acc + handArr[i], 0);
+        return 13 - kinds - hasPair + other;
+    }
+
+    // ---------- 进张计算 ----------
+    function calcAdvances(handArr, revealedArr) {
+        let baseShanten = computeShanten(handArr, revealedArr);
+        if (baseShanten === 99) return [];
+        let advances = [];
+        for (let tile=0; tile<34; tile++) {
+            if (remaining[tile] <= 0) continue;
+            if (handArr[tile] >= 4) continue;
+            let newHand = handArr.slice();
+            newHand[tile]++;
+            let newShanten = computeShanten(newHand, revealedArr);
+            if (newShanten < baseShanten) {
+                advances.push({id: tile, rest: remaining[tile]});
+            }
+        }
+        return advances;
+    }
+
+    function calcDiscardAnalysis(handArr, revealedArr) {
+        let discards = [];
+        for (let i=0; i<34; i++) {
+            if (handArr[i] === 0) continue;
+            let newHand = handArr.slice();
+            newHand[i]--;
+            let newShanten = computeShanten(newHand, revealedArr);
+            let advancesAfter = calcAdvances(newHand, revealedArr);
+            discards.push({
+                tileId: i,
+                shanten: newShanten,
+                advances: advancesAfter,
+            });
+        }
+        return discards;
+    }
+
+    // ---------- 命令处理 (多命令支持) ----------
+    function executeCommands(input) {
+        let cmds = input.trim().split(/\s+/);
+        for (let cmd of cmds) {
+            if (cmd === '') continue;
+            if (!executeSingleCommand(cmd)) {
+                alert(`命令执行失败: ${cmd}`);
+                break;
+            }
+        }
+        updateUI();
+    }
+
+    function executeSingleCommand(cmd) {
+        cmd = cmd.toLowerCase().trim();
+        if (cmd === 'reset') {
+            hand = new Array(34).fill(0);
+            revealed = [];
+            remaining = new Array(34).fill(4);
+            return true;
+        }
+
+        if (cmd.startsWith('h')) {
+            hand = new Array(34).fill(0);
+            let rest = cmd.substring(1);
+            const segmentRegex = /([mpsz])(\d+)/g;
+            let match;
+            while ((match = segmentRegex.exec(rest)) !== null) {
+                let suit = match[1];
+                let digits = match[2];
+                for (let ch of digits) {
+                    let id = getTileId(suit, ch);
+                    if (id !== -1) hand[id]++;
+                }
+            }
+            return true;
+        }
+
+        let rMatch = cmd.match(/^r([mpsz])(\d+)$/);
+        if (rMatch) {
+            let suit = rMatch[1];
+            let digits = rMatch[2];
+            for (let ch of digits) {
+                let id = getTileId(suit, ch);
+                if (id === -1) { alert(`无效牌: ${suit}${ch}`); return false; }
+                if (remaining[id] <= 0) {
+                    alert(`牌池已无 ${ID_TO_TILE[id]}`);
+                    return false;
+                }
+                remaining[id]--;
+            }
+            return true;
+        }
+
+        const singleRegex = /^([idbk])([mpsz])(\d)$/;
+        let matchSingle = cmd.match(singleRegex);
+        if (matchSingle) {
+            let op = matchSingle[1];
+            let suit = matchSingle[2];
+            let num = matchSingle[3];
+            let id = getTileId(suit, num);
+            if (id === -1) { alert(`无效牌: ${suit}${num}`); return false; }
+
+            switch (op) {
+                case 'i':
+                    if (remaining[id] <= 0) { alert(`牌池已无 ${ID_TO_TILE[id]}`); return false; }
+                    remaining[id]--;
+                    hand[id]++;
+                    break;
+                case 'd':
+                    if (hand[id] <= 0) { alert(`手牌中没有 ${ID_TO_TILE[id]}`); return false; }
+                    hand[id]--;
+                    break;
+                case 'b':
+                    if (hand[id] < 3) { alert(`手牌中 ${ID_TO_TILE[id]} 不足3张，无法碰`); return false; }
+                    hand[id] -= 3;
+                    revealed.push({type: 'pon', tiles: [id, id, id]});
+                    break;
+                case 'k':
+                    if (hand[id] < 4) { alert(`手牌中 ${ID_TO_TILE[id]} 不足4张，无法暗杠`); return false; }
+                    hand[id] -= 4;
+                    revealed.push({type: 'kan', tiles: [id, id, id, id]});
+                    break;
+            }
+            return true;
+        }
+
+        let cMatch = cmd.match(/^c([mpsz])(\d{3})$/);
+        if (cMatch) {
+            let suit = cMatch[1];
+            let digits = cMatch[2];
+            if (digits.length !== 3) { alert('吃必须输入三个数字'); return false; }
+            let nums = digits.split('').map(d => parseInt(d));
+            if (!(nums[1] === nums[0]+1 && nums[2] === nums[0]+2)) {
+                alert('数字必须连续，例如 234'); return false;
+            }
+            if (suit === 'z') { alert('字牌不能吃'); return false; }
+            let ids = nums.map(n => getTileId(suit, n.toString()));
+            if (ids.some(id => id === -1)) { alert('包含无效牌'); return false; }
+
+            if (hand[ids[0]] < 1 || hand[ids[1]] < 1 || hand[ids[2]] < 1) {
+                alert(`手牌中缺少顺子 ${ID_TO_TILE[ids[0]]} ${ID_TO_TILE[ids[1]]} ${ID_TO_TILE[ids[2]]}`);
+                return false;
+            }
+            hand[ids[0]]--;
+            hand[ids[1]]--;
+            hand[ids[2]]--;
+            revealed.push({type: 'chii', tiles: ids});
+            return true;
+        }
+
+        alert(`未知命令: ${cmd}`);
+        return false;
+    }
+
+    function generateAnalysis(shanten, handCount) {
+        let phase = (handCount % 3 === 1) ? 'before' : ((handCount % 3 === 2) ? 'after' : 'other');
+        let tbody = document.getElementById('analysisBody');
+        if (phase === 'before') {
+            let advances = calcAdvances(hand, revealed);
+            let html = `<tr><th style="width:200px;">📈 进张牌 (${advances.length}种)</th><td><div class="advance-tiles">`;
+            if (advances.length === 0) html += '无进张 (已听牌或错牌)';
+            else {
+                advances.forEach(a => {
+                    html += `<span class="mini-tile">${ID_TO_TILE[a.id]} <span style="background:#a67c4b; color:white; border-radius:50%; padding:2px 8px;">${a.rest}</span></span>`;
+                });
+            }
+            html += `</div></td></tr>`;
+            tbody.innerHTML = html;
+        } else if (phase === 'after') {
+            let discards = calcDiscardAnalysis(hand, revealed);
+            if (discards.length === 0) { tbody.innerHTML = '<tr><td colspan="2">无合法打出牌</td></tr>'; return; }
+            let html = `<tr><th>打出牌</th><th>向听后</th><th>进张 (种类×剩余)</th></tr>`;
+            discards.forEach(d => {
+                let advHtml = '';
+                d.advances.forEach(a => {
+                    advHtml += `<span class="mini-tile">${ID_TO_TILE[a.id]}<span style="background:#7d613b; color:#efdb9b; padding:2px 6px; border-radius:30px;">${a.rest}</span></span> `;
+                });
+                if (d.advances.length === 0) advHtml = '无进张';
+                html += `<tr><td><strong>${ID_TO_TILE[d.tileId]}</strong></td><td>${shantenToChinese(d.shanten)}</td><td><div class="advance-tiles">${advHtml}</div></td></tr>`;
+            });
+            tbody.innerHTML = html;
+        } else {
+            tbody.innerHTML = '<tr><td colspan="2">手牌数量异常，无法分析(可能杠导致)</td></tr>';
+        }
+    }
+
+    document.getElementById('execBtn').addEventListener('click', () => {
+        let input = document.getElementById('commandInput').value;
+        executeCommands(input);
+    });
+
+    window.onload = function() {
+        let init = "hm123p333s22567z111";
+        document.getElementById('commandInput').value = init;
+        executeCommands(init);
+    };
+})();
+</script>
+</body>
+</html>
