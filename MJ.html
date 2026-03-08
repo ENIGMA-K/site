@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📝 立直麻将·命令行分析器 (左右布局/中文向听)</title>
+    <title>📝 立直麻将·命令行分析器 (终极优化版)</title>
     <style>
         * {
             box-sizing: border-box;
@@ -74,13 +74,16 @@
             max-height: 120px;
             overflow-y: auto;
         }
-        .tile-item {
-            background: #f8f0da;
-            border: 2px solid #7c6342;
-            border-radius: 18px;
-            padding: 4px 12px;
-            font-weight: bold;
-            color: #1f3d3a;
+        .compact-hand {
+            font-family: 'Courier New', monospace;
+            font-size: 1.6rem;
+            line-height: 1.5;
+            background: #d6c8a8;
+            padding: 10px 16px;
+            border-radius: 28px;
+            border: 2px solid #7d613b;
+            color: #1e3d2e;
+            word-break: break-all;
         }
         .revealed-group {
             background: #b8a88b;
@@ -88,6 +91,7 @@
             padding: 8px 16px;
             margin: 6px 0;
             font-size: 1.4rem;
+            font-family: 'Courier New', monospace;
         }
         .command-line {
             display: flex;
@@ -235,7 +239,7 @@
 </head>
 <body>
 <div class="console-container">
-    <h1>🀫 立直·CLI 分析器 <span style="font-size: 1.2rem; background:#2f543b; padding:6px 20px; border-radius:40px; color:#efe6b0;">多命令(空格分隔)｜r删多张｜c/b/k均从手牌取</span></h1>
+    <h1>🀫 立直·CLI 分析器 <span style="font-size: 1.2rem; background:#2f543b; padding:6px 20px; border-radius:40px; color:#efe6b0;">r支持多段｜自动清空｜排序｜缩写显示</span></h1>
 
     <div class="main-grid">
         <!-- 左侧：命令输入与状态 -->
@@ -243,11 +247,13 @@
             <div class="status-panels">
                 <div class="panel">
                     <h3>🀆 暗牌 (手中)</h3>
-                    <div id="handDisplay" class="tile-list">-</div>
+                    <div id="handDisplay" class="compact-hand">-</div>
                 </div>
                 <div class="panel">
                     <h3>🀁 副露 (明牌)</h3>
-                    <div id="revealedDisplay" class="tile-list">-</div>
+                    <div id="revealedDisplay" class="tile-list">
+                        <!-- 副露缩写列表 -->
+                    </div>
                 </div>
                 <div class="panel">
                     <h3>⛰️ 牌池剩余</h3>
@@ -258,14 +264,14 @@
             </div>
 
             <div class="command-line">
-                <input type="text" id="commandInput" placeholder="多个命令用空格分隔，例如: hm123p333s22567z111 rm5 im5 dm9" value="hm123p333s22567z111">
+                <input type="text" id="commandInput" placeholder="多个命令用空格分隔，例如: hm123p333s22567z111 rm2p345z1s6 im5" value="hm123p333s22567z111">
                 <button id="execBtn">⏎ 执行</button>
             </div>
             <div class="helper">
                 <strong>📌 命令格式 (无空格，多个命令以空格分隔)：</strong><br>
                 • <code>h&lt;花色&gt;&lt;数字串&gt;...</code> 输入手牌 (覆盖)<br>
                 • <code>reset</code> 重置<br>
-                • <code>r&lt;花色&gt;&lt;多位数字&gt;</code> 牌池减少多张 (例: rs234)<br>
+                • <code>r&lt;花色&gt;&lt;数字串&gt;...&lt;花色&gt;&lt;数字串&gt;</code> 牌池减少多段 (例: rm2p345z1s6)<br>
                 • <code>i&lt;花色&gt;&lt;数字&gt;</code> 摸牌 (例: im5)<br>
                 • <code>d&lt;花色&gt;&lt;数字&gt;</code> 打牌 (例: dm5)<br>
                 • <code>b&lt;花色&gt;&lt;数字&gt;</code> 碰 (需手牌3张)<br>
@@ -290,7 +296,7 @@
         </div>
     </div>
 
-    <div class="footer-note">※ 向听计算含一般·七对·国士，副露后仅一般形。牌池表格中数字表示剩余张数。</div>
+    <div class="footer-note">※ 向听计算含一般·七对·国士，副露后仅一般形。牌池表格中数字表示剩余张数。执行后命令行自动清空。</div>
 </div>
 
 <script>
@@ -337,6 +343,53 @@
         return base + num - 1;
     }
 
+    // 将hand数组转换为缩写字符串，如 "m123p333s22567z111"
+    function formatHand(handArr) {
+        let result = '';
+        const suits = ['m','p','s','z'];
+        suits.forEach(suit => {
+            let base = suitBase(suit);
+            let max = (suit === 'z') ? 7 : 9;
+            let segment = '';
+            for (let i=1; i<=max; i++) {
+                let id = base + i - 1;
+                let cnt = handArr[id];
+                for (let j=0; j<cnt; j++) {
+                    segment += i.toString();
+                }
+            }
+            if (segment.length > 0) {
+                result += suit + segment;
+            }
+        });
+        return result || '无';
+    }
+
+    // 格式化副露数组，每个副露组显示为缩写，例如 "m111" (碰) 或 "m123" (吃)
+    function formatRevealed(revealedArr) {
+        let html = '';
+        revealedArr.forEach(g => {
+            let typeLabel = g.type === 'pon' ? '碰' : (g.type === 'kan' ? '杠' : '吃');
+            // 按花色分组缩写 (一组副露通常同花色)
+            let tiles = g.tiles.map(id => ID_TO_TILE[id]);
+            // 按花色数字串合并
+            let groups = {};
+            tiles.forEach(t => {
+                let suit = t[0];
+                let num = t[1];
+                if (!groups[suit]) groups[suit] = [];
+                groups[suit].push(num);
+            });
+            let abbr = '';
+            for (let suit in groups) {
+                let nums = groups[suit].sort().join('');
+                abbr += suit + nums;
+            }
+            html += `<div class="revealed-group">【${typeLabel}】${abbr}</div>`;
+        });
+        return html || '无';
+    }
+
     // 中文向听显示
     function shantenToChinese(sh) {
         if (sh === -1) return '胡牌';
@@ -354,27 +407,14 @@
 
     // ---------- 更新UI (含牌池表格) ----------
     function updateUI() {
-        // 暗牌
-        let handHtml = [];
-        for (let i=0; i<34; i++) {
-            if (hand[i] > 0) {
-                let cnt = hand[i];
-                handHtml.push(`<span class="tile-item">${ID_TO_TILE[i]}${cnt>1?'×'+cnt:''}</span>`);
-            }
-        }
-        document.getElementById('handDisplay').innerHTML = handHtml.join('') || '无';
+        // 暗牌缩写
+        document.getElementById('handDisplay').innerText = formatHand(hand);
 
-        // 副露
-        let revHtml = '';
-        revealed.forEach(g => {
-            let tileNames = g.tiles.map(id => ID_TO_TILE[id]).join('');
-            revHtml += `<div class="revealed-group">【${g.type==='pon'?'碰':g.type==='kan'?'杠':'吃'}】${tileNames}</div>`;
-        });
-        document.getElementById('revealedDisplay').innerHTML = revHtml || '无';
+        // 副露缩写
+        document.getElementById('revealedDisplay').innerHTML = formatRevealed(revealed);
 
         // 牌池剩余表格 (4行×9列)
         let remainingHtml = '<table class="pool-table">';
-        // 表头：数字1-9
         remainingHtml += '<tr><th></th>';
         for (let i=1; i<=9; i++) remainingHtml += `<th>${i}</th>`;
         remainingHtml += '</tr>';
@@ -390,7 +430,7 @@
                     let id = base + i - 1;
                     remainingHtml += `<td>${remaining[id]}</td>`;
                 } else {
-                    remainingHtml += `<td>-</td>`; // 字牌后面两列空白
+                    remainingHtml += `<td>-</td>`;
                 }
             }
             remainingHtml += '</tr>';
@@ -547,6 +587,7 @@
                 tileId: i,
                 shanten: newShanten,
                 advances: advancesAfter,
+                total: advancesAfter.length
             });
         }
         return discards;
@@ -563,6 +604,8 @@
             }
         }
         updateUI();
+        // 执行后清空命令行
+        document.getElementById('commandInput').value = '';
     }
 
     function executeSingleCommand(cmd) {
@@ -574,6 +617,7 @@
             return true;
         }
 
+        // h 命令 (手牌覆盖)
         if (cmd.startsWith('h')) {
             hand = new Array(34).fill(0);
             let rest = cmd.substring(1);
@@ -590,22 +634,28 @@
             return true;
         }
 
-        let rMatch = cmd.match(/^r([mpsz])(\d+)$/);
-        if (rMatch) {
-            let suit = rMatch[1];
-            let digits = rMatch[2];
-            for (let ch of digits) {
-                let id = getTileId(suit, ch);
-                if (id === -1) { alert(`无效牌: ${suit}${ch}`); return false; }
-                if (remaining[id] <= 0) {
-                    alert(`牌池已无 ${ID_TO_TILE[id]}`);
-                    return false;
+        // r 命令 (多段牌池减少)
+        if (cmd.startsWith('r')) {
+            let rest = cmd.substring(1);
+            const segmentRegex = /([mpsz])(\d+)/g;
+            let match;
+            while ((match = segmentRegex.exec(rest)) !== null) {
+                let suit = match[1];
+                let digits = match[2];
+                for (let ch of digits) {
+                    let id = getTileId(suit, ch);
+                    if (id === -1) { alert(`无效牌: ${suit}${ch}`); return false; }
+                    if (remaining[id] <= 0) {
+                        alert(`牌池已无 ${ID_TO_TILE[id]}`);
+                        return false;
+                    }
+                    remaining[id]--;
                 }
-                remaining[id]--;
             }
             return true;
         }
 
+        // 单张命令 i/d/b/k
         const singleRegex = /^([idbk])([mpsz])(\d)$/;
         let matchSingle = cmd.match(singleRegex);
         if (matchSingle) {
@@ -639,6 +689,7 @@
             return true;
         }
 
+        // c 吃牌
         let cMatch = cmd.match(/^c([mpsz])(\d{3})$/);
         if (cMatch) {
             let suit = cMatch[1];
@@ -667,6 +718,7 @@
         return false;
     }
 
+    // 生成分析表格 (摸牌后按向听升序、进张总数降序排序)
     function generateAnalysis(shanten, handCount) {
         let phase = (handCount % 3 === 1) ? 'before' : ((handCount % 3 === 2) ? 'after' : 'other');
         let tbody = document.getElementById('analysisBody');
@@ -684,14 +736,19 @@
         } else if (phase === 'after') {
             let discards = calcDiscardAnalysis(hand, revealed);
             if (discards.length === 0) { tbody.innerHTML = '<tr><td colspan="2">无合法打出牌</td></tr>'; return; }
-            let html = `<tr><th>打出牌</th><th>向听后</th><th>进张 (种类×剩余)</th></tr>`;
+            // 排序：先按向听升序，再按进张总数降序
+            discards.sort((a, b) => {
+                if (a.shanten !== b.shanten) return a.shanten - b.shanten;
+                return b.total - a.total;
+            });
+            let html = `<tr><th>打出牌</th><th>向听后</th><th>进张 (总数/种类×剩余)</th></tr>`;
             discards.forEach(d => {
                 let advHtml = '';
                 d.advances.forEach(a => {
                     advHtml += `<span class="mini-tile">${ID_TO_TILE[a.id]}<span style="background:#7d613b; color:#efdb9b; padding:2px 6px; border-radius:30px;">${a.rest}</span></span> `;
                 });
                 if (d.advances.length === 0) advHtml = '无进张';
-                html += `<tr><td><strong>${ID_TO_TILE[d.tileId]}</strong></td><td>${shantenToChinese(d.shanten)}</td><td><div class="advance-tiles">${advHtml}</div></td></tr>`;
+                html += `<tr><td><strong>${ID_TO_TILE[d.tileId]}</strong></td><td>${shantenToChinese(d.shanten)}</td><td><div class="advance-tiles">${d.total}种 ${advHtml}</div></td></tr>`;
             });
             tbody.innerHTML = html;
         } else {
