@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>二维码分割器（中文修正版）</title>
+    <title>二维码分割器（中文完美版）</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; max-width: 1000px; margin: 20px auto; padding: 20px; background: #f5f5f5; }
         textarea { width: 100%; height: 200px; font-family: monospace; padding: 8px; }
@@ -15,7 +15,7 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 </head>
 <body>
-    <h1>🔲 长文本 → 多二维码分割器 (中文修正版)</h1>
+    <h1>🔲 长文本 → 多二维码分割器 (中文完美版)</h1>
     <p>输入长文本（支持中文），工具将按每段字符数分割，并为每段生成二维码。请截图保存所有二维码。</p>
     <textarea id="inputText" placeholder="粘贴需要编码的长文本..."></textarea>
     <div>
@@ -34,10 +34,16 @@
             // 使用 qrcode-generator 官方 API
             var qr = qrcode(0, 'H'); // 版本0自动，高纠错级别
 
-            // 关键修改：将文本转为 UTF-8 字节数组，使用字节模式
-            var encoder = new TextEncoder(); // 现代浏览器支持
+            // 关键修改：将文本转为 UTF-8 字节数组，再转为字节字符串（每个字符对应一个字节值）
+            var encoder = new TextEncoder();
             var byteArray = encoder.encode(text);
-            qr.addData(byteArray, 'Byte'); // 指定字节模式
+            var byteString = '';
+            for (var i = 0; i < byteArray.length; i++) {
+                byteString += String.fromCharCode(byteArray[i]);
+            }
+
+            // 以字节模式添加数据
+            qr.addData(byteString, 'Byte');
 
             qr.make();
             var canvas = document.createElement('canvas');
