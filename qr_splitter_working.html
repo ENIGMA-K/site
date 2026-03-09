@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>二维码分割器（1）</title>
+    <title>二维码分割器（中文修正版）</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; max-width: 1000px; margin: 20px auto; padding: 20px; background: #f5f5f5; }
         textarea { width: 100%; height: 200px; font-family: monospace; padding: 8px; }
@@ -11,14 +11,12 @@
         .qrcode-card { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 15px; text-align: center; width: 260px; }
         .qrcode-card canvas { max-width: 100%; height: auto; }
     </style>
-    <!-- 使用 qrcode-generator 官方库 (CDN，但可离线保存后本地引用) -->
-    <!-- 注意：如果内网无法联网，请先将此库下载为本地文件，并修改 src 为本地路径 -->
+    <!-- 使用 qrcode-generator 官方库 (CDN) -->
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
-    <!-- 如果无法联网，请将上述库下载后放在同目录，并改为 <script src="qrcode.min.js"></script> -->
 </head>
 <body>
-    <h1>🔲 长文本 → 多二维码分割器 (兼容版)</h1>
-    <p>输入长文本，工具将按每段字符数分割，并为每段生成二维码。请截图保存所有二维码。</p>
+    <h1>🔲 长文本 → 多二维码分割器 (中文修正版)</h1>
+    <p>输入长文本（支持中文），工具将按每段字符数分割，并为每段生成二维码。请截图保存所有二维码。</p>
     <textarea id="inputText" placeholder="粘贴需要编码的长文本..."></textarea>
     <div>
         每段字符数：<input type="number" id="chunkSize" value="500" min="100" max="2000"> (建议500-700，确保二维码清晰)
@@ -35,7 +33,12 @@
             size = size || 250;
             // 使用 qrcode-generator 官方 API
             var qr = qrcode(0, 'H'); // 版本0自动，高纠错级别
-            qr.addData(text);
+
+            // 关键修改：将文本转为 UTF-8 字节数组，使用字节模式
+            var encoder = new TextEncoder(); // 现代浏览器支持
+            var byteArray = encoder.encode(text);
+            qr.addData(byteArray, 'Byte'); // 指定字节模式
+
             qr.make();
             var canvas = document.createElement('canvas');
             canvas.width = size;
